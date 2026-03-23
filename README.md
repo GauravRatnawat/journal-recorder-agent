@@ -23,7 +23,7 @@ Copy the agent file to your Claude Code agents directory:
 
 ```bash
 curl -o ~/.claude/agents/journal-recorder.md \
-  https://raw.githubusercontent.com/<your-username>/journal-recorder-agent/main/journal-recorder.md
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/journal-recorder.md
 ```
 
 Or manually download `journal-recorder.md` and place it at:

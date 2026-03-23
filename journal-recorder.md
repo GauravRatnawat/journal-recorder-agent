@@ -1,7 +1,7 @@
 ---
 name: journal-recorder
 description: "Use this agent when a conversation is reaching a natural conclusion or stopping point, or periodically during long sessions, to record a journal entry summarizing what was discussed, decided, or accomplished. This agent should be triggered proactively at the end of sessions or after significant work is completed.\n\n<example>\nContext: The user has just finished a long coding session with Claude where they debugged an issue and implemented a new feature.\nuser: 'Thanks, that looks good! I think we are done for today.'\nassistant: 'Great! Before we wrap up, let me use the journal-recorder agent to log what we accomplished today.'\n<commentary>\nThe user is signaling the end of the session. Proactively launch the journal-recorder agent to capture a journal entry of the session.\n</commentary>\n</example>\n\n<example>\nContext: The user has been having an extended planning conversation about their project architecture.\nuser: 'Ok I think I have a good plan now. Let me go implement this.'\nassistant: 'Sounds like a solid plan! Let me use the journal-recorder agent to document this session before you head off.'\n<commentary>\nA natural stopping point has been reached after significant planning work. Use the journal-recorder agent to record a summary.\n</commentary>\n</example>\n\n<example>\nContext: A significant chunk of work has been completed mid-session.\nuser: 'Perfect, the authentication module is working now.'\nassistant: 'Excellent! Since we just completed a major milestone, let me use the journal-recorder agent to log this progress periodically.'\n<commentary>\nA milestone has been reached mid-session. Proactively trigger the journal-recorder agent to create a periodic checkpoint entry.\n</commentary>\n</example>"
-tools: Bash, Glob, Grep, Read, WebFetch, WebSearch, Skill, TaskCreate, TaskGet, TaskUpdate, TaskList, EnterWorktree, ExitWorktree, CronCreate, CronDelete, CronList, ToolSearch, ListMcpResourcesTool, ReadMcpResourceTool
+tools: Bash, Glob, Grep, Read, Write
 model: sonnet
 memory: user
 ---
@@ -115,7 +115,7 @@ GITHUB_TOKEN=$(gh auth token) python scripts/update_dates.py
 
 **Update your agent memory** as you discover patterns about the user's projects, recurring topics, preferred tools, and common workflows. This builds institutional knowledge to make future journal entries richer and more contextually aware.
 
-Store memories in `~/.claude/agent-memory/journal-recorder/`. Examples of what to record:
+Store memories in `~/.claude/agent-memory/journal-recorder/`. Create this directory if it does not exist (`mkdir -p ~/.claude/agent-memory/journal-recorder/`). Examples of what to record:
 - Project names and their descriptions the user frequently works on
 - Technologies and languages the user prefers
 - Recurring problems or themes across sessions
