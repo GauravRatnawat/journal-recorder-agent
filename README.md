@@ -19,6 +19,8 @@ Entries are written for a "new engineer with zero prior context" — detailed en
 
 ## Install
 
+### Step 1: Install the agent
+
 Copy the agent file to your Claude Code agents directory:
 
 ```bash
@@ -34,6 +36,33 @@ Or manually download `journal-recorder.md` and place it at:
 
 That's it. Claude Code picks up agents automatically — no restart needed.
 
+### Step 2: Enable auto-journaling on compaction (optional but recommended)
+
+Add a `PostCompact` hook to `~/.claude/settings.json` so a journal entry is saved automatically whenever Claude compacts the context window (both automatic and manual `/compact`):
+
+```json
+{
+  "hooks": {
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "input=$(cat); summary=$(echo \"$input\" | jq -r '.summary // \"(no summary available)\"'); trigger=$(echo \"$input\" | jq -r '.trigger // \"unknown\"'); ts=$(date +%Y%m%d_%H%M%S); dir=\"$HOME/claude-journal\"; mkdir -p \"$dir\"; printf '# Journal Entry\\n\\n**Date:** %s\\n**Trigger:** %s compaction\\n\\n## Session Summary\\n\\n%s\\n' \"$(date '+%Y-%m-%d %H:%M')\" \"$trigger\" \"$summary\" > \"$dir/journal_${ts}.md\" 2>/dev/null || true",
+            "statusMessage": "Saving journal entry after compaction...",
+            "timeout": 30
+          }
+        ]
+      }
+    ]
+  }
+}
+```
+
+This hook extracts Claude's compaction summary from stdin and writes it as a structured markdown file to `~/claude-journal/`. It requires `jq` — install it with `brew install jq` (macOS) or `apt install jq` (Linux).
+
+> **Note:** If you already have other hooks in `~/.claude/settings.json`, merge the `PostCompact` block into the existing `"hooks"` object rather than replacing it.
+
 ## Usage
 
 The agent triggers automatically. Claude will invoke it:
@@ -41,6 +70,7 @@ The agent triggers automatically. Claude will invoke it:
 - When you say things like "we're done", "thanks, looks good", or "let me go implement this"
 - After a major milestone ("the authentication module is working now")
 - Periodically during long sessions
+- On every `/compact` or auto-compaction (if you set up the PostCompact hook above)
 
 You can also invoke it explicitly:
 
