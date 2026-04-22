@@ -1,44 +1,37 @@
 # journal-recorder — Claude Code Agent
 
-A Claude Code subagent that automatically records your coding sessions as rich, searchable journal entries. Triggered proactively at the end of conversations or after significant milestones.
+Automatically records your coding sessions as rich, shareable markdown journal entries. Triggers at conversation end, milestones, and on every `/compact`.
 
-## What it does
+Each entry includes: what was worked on, decisions made, commands run, problems solved, and action items — written so anyone with zero prior context can understand it.
 
-After each session, the agent writes a structured markdown entry to `~/claude-journal/` capturing:
+Entries are saved to `~/claude-journal/YYYY-MM-DD_HH-MM_<title>.md`.
 
-- Session summary and background context
-- What was accomplished (with file names)
-- Step-by-step flow (reproducible recipe)
-- Every command and script run
-- Key decisions and reasoning
-- Problems encountered and solutions
-- Action items and next steps
-- Searchable tags
-
-Entries are written for a "new engineer with zero prior context" — detailed enough to pick up exactly where you left off.
+---
 
 ## Install
 
-### Step 1: Install the agent
+**Requirements:** [Claude Code](https://claude.ai/code), `jq` (`brew install jq`)
 
-Copy the agent file to your Claude Code agents directory:
+### 1. Install the agent
 
 ```bash
+mkdir -p ~/.claude/agents
 curl -o ~/.claude/agents/journal-recorder.md \
   https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/journal-recorder.md
 ```
 
-Or manually download `journal-recorder.md` and place it at:
+Claude Code picks it up automatically — no restart needed.
 
+### 2. Enable auto-journaling on compaction
+
+```bash
+mkdir -p ~/.claude/hooks
+curl -o ~/.claude/hooks/post-compact-journal.sh \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-compact-journal.sh
+chmod +x ~/.claude/hooks/post-compact-journal.sh
 ```
-~/.claude/agents/journal-recorder.md
-```
 
-That's it. Claude Code picks up agents automatically — no restart needed.
-
-### Step 2: Enable auto-journaling on compaction (optional but recommended)
-
-Add a `PostCompact` hook to `~/.claude/settings.json` so a journal entry is saved automatically whenever Claude compacts the context window (both automatic and manual `/compact`):
+Add to `~/.claude/settings.json` (merge into existing `"hooks"` if present):
 
 ```json
 {
@@ -48,9 +41,9 @@ Add a `PostCompact` hook to `~/.claude/settings.json` so a journal entry is save
         "hooks": [
           {
             "type": "command",
-            "command": "input=$(cat); summary=$(echo \"$input\" | jq -r '.summary // \"(no summary available)\"'); trigger=$(echo \"$input\" | jq -r '.trigger // \"unknown\"'); ts=$(date +%Y%m%d_%H%M%S); dir=\"$HOME/claude-journal\"; mkdir -p \"$dir\"; printf '# Journal Entry\\n\\n**Date:** %s\\n**Trigger:** %s compaction\\n\\n## Session Summary\\n\\n%s\\n' \"$(date '+%Y-%m-%d %H:%M')\" \"$trigger\" \"$summary\" > \"$dir/journal_${ts}.md\" 2>/dev/null || true",
-            "statusMessage": "Saving journal entry after compaction...",
-            "timeout": 30
+            "command": "bash ~/.claude/hooks/post-compact-journal.sh",
+            "statusMessage": "Saving journal entry...",
+            "timeout": 90
           }
         ]
       }
@@ -59,46 +52,55 @@ Add a `PostCompact` hook to `~/.claude/settings.json` so a journal entry is save
 }
 ```
 
-This hook extracts Claude's compaction summary from stdin and writes it as a structured markdown file to `~/claude-journal/`. It requires `jq` — install it with `brew install jq` (macOS) or `apt install jq` (Linux).
+The hook reads the full conversation transcript and uses `claude -p` to generate a proper journal entry after each compaction (both `/compact` and auto-compact).
 
-> **Note:** If you already have other hooks in `~/.claude/settings.json`, merge the `PostCompact` block into the existing `"hooks"` object rather than replacing it.
+---
 
 ## Usage
 
-The agent triggers automatically. Claude will invoke it:
+**Automatic** — the agent fires on its own when:
+- You signal the session is ending ("we're done", "looks good", "let me go implement this")
+- A major milestone is reached
+- Every `/compact` or auto-compaction (with the hook above)
 
-- When you say things like "we're done", "thanks, looks good", or "let me go implement this"
-- After a major milestone ("the authentication module is working now")
-- Periodically during long sessions
-- On every `/compact` or auto-compaction (if you set up the PostCompact hook above)
-
-You can also invoke it explicitly:
-
+**Manual:**
 ```
 Use the journal-recorder agent to log this session.
 ```
 
-## Journal storage
+---
 
-Entries are saved to `~/claude-journal/` with the naming format:
+## What the entries look like
 
 ```
-YYYY-MM-DD_HH-MM_<short-topic-slug>.md
+~/claude-journal/2026-04-23_01-00_postcompact-hook-setup-and-fix.md
 ```
 
-Examples:
+```markdown
+# PostCompact Hook Setup and Fix
+
+**Date:** 2026-04-23 01:00
+
+## TL;DR
+Configured Claude Code to auto-journal on compaction. Initial PreCompact + agent
+hook failed (unsupported outside REPL). Switched to PostCompact + command hook
+that reads the conversation transcript and generates a full entry via claude -p.
+
+## What Was Worked On
+...
+## What Was Accomplished
+- bullet list with file names
+## Key Decisions
+...
+## Problems & Solutions
+...
+## Action Items
+- [ ] ...
+## Tags
+`#claude-code` `#hooks` `#automation`
 ```
-~/claude-journal/2024-01-15_15-45_react-hooks-debugging.md
-~/claude-journal/2024-01-15_10-00_api-architecture-planning.md
-```
 
-## Customization
-
-To change the journal storage location, edit the `## Storage Location` section in `journal-recorder.md` and update the path.
-
-## Requirements
-
-- [Claude Code](https://claude.ai/code) CLI
+---
 
 ## License
 
