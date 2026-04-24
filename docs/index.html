@@ -506,7 +506,7 @@
     <span>·</span>
     <span>MIT License</span>
     <span>·</span>
-    <span>Zero config</span>
+    <span>Your folder, your rules</span>
     <span>·</span>
     <span>No trackers</span>
   </div>
@@ -547,16 +547,16 @@
     <div class="trigger-item">
       <div class="trigger-icon">◉</div>
       <div class="trigger-text">
-        Session end signals
-        <small>"we're done", "looks good", "let me go implement this"</small>
+        Session end — Stop hook
+        <small>fires when Claude's turn completes · 30-min dedup guard · no action needed</small>
       </div>
       <div class="trigger-badge auto">auto</div>
     </div>
     <div class="trigger-item">
       <div class="trigger-icon">◎</div>
       <div class="trigger-text">
-        Major milestone reached
-        <small>"the authentication module is working", "tests passing"</small>
+        Session end signals — agent
+        <small>"we're done", "thanks", "looks good", "bye", "ship it"</small>
       </div>
       <div class="trigger-badge auto">auto</div>
     </div>
@@ -577,6 +577,10 @@
       <div class="trigger-badge">manual</div>
     </div>
   </div>
+
+  <p style="font-family:var(--mono);font-size:11px;color:var(--ink-mute);margin-top:16px;line-height:1.7">
+    All three automatic paths share a marker file. Whichever fires first writes the entry and stamps it. The others see it and skip — exactly one entry per session, no duplicates.
+  </p>
 </section>
 
 <!-- INSTALL -->
@@ -603,12 +607,17 @@ curl -o ~/.claude/agents/journal-recorder.md \
     <div class="install-step">
       <div class="step-num">02 /</div>
       <div class="step-body">
-        <h3>Enable auto-journaling on compaction (optional but recommended)</h3>
-        <pre><code><span class="comment"># Install the PostCompact hook</span>
+        <h3>Install both hooks</h3>
+        <pre><code><span class="comment"># PostCompact — fires on every /compact</span>
 mkdir -p ~/.claude/hooks
 curl -o ~/.claude/hooks/post-compact-journal.sh \
   https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-compact-journal.sh
-chmod +x ~/.claude/hooks/post-compact-journal.sh</code></pre>
+chmod +x ~/.claude/hooks/post-compact-journal.sh
+
+<span class="comment"># Stop — fires at session end, 30-min dedup guard</span>
+curl -o ~/.claude/hooks/post-stop-journal.sh \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-stop-journal.sh
+chmod +x ~/.claude/hooks/post-stop-journal.sh</code></pre>
         <p style="font-size:13px;color:var(--ink-dim);margin:16px 0 12px;line-height:1.6">Add to <code>~/.claude/settings.json</code> (merge into existing <code>"hooks"</code> if present):</p>
         <div class="json-block">{
   "hooks": {
@@ -623,9 +632,31 @@ chmod +x ~/.claude/hooks/post-compact-journal.sh</code></pre>
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/post-stop-journal.sh",
+            "statusMessage": "Saving journal entry...",
+            "timeout": 90
+          }
+        ]
+      }
     ]
   }
 }</div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">03 /</div>
+      <div class="step-body">
+        <h3>Choose your journal folder</h3>
+        <p style="font-size:13px;color:var(--ink-dim);margin-bottom:12px;line-height:1.6">Claude asks once on first use. To set it manually at any time:</p>
+        <pre><code>echo "~/Documents/my-journal" > ~/.claude/.journal-folder</code></pre>
+        <div class="step-note">Default if unset: ~/claude-journal/ — all three trigger paths read from this file.</div>
       </div>
     </div>
   </div>
@@ -636,7 +667,7 @@ chmod +x ~/.claude/hooks/post-compact-journal.sh</code></pre>
   <div class="section-label">§ 04 / WHAT ENTRIES LOOK LIKE</div>
 
   <p style="font-size:15px;line-height:1.7;color:var(--ink-dim);max-width:620px;margin-bottom:8px">
-    Entries are saved to <code>~/claude-journal/</code> as <code>YYYY-MM-DD_HH-MM_&lt;title&gt;.md</code>. Each one is self-contained — written for a new engineer with zero prior context.
+    Entries are saved to your configured folder as <code>YYYY-MM-DD_HH-MM_&lt;title&gt;.md</code>. Each one is self-contained — written for a new engineer with zero prior context.
   </p>
 
   <div class="entry-preview">
@@ -681,12 +712,12 @@ entry via claude -p.</span>
 
   <div class="stat-row">
     <div class="stat">
-      <div class="stat-val">0</div>
-      <div class="stat-label">Config required</div>
+      <div class="stat-val">3</div>
+      <div class="stat-label">Trigger paths</div>
     </div>
     <div class="stat">
-      <div class="stat-val">2</div>
-      <div class="stat-label">Install steps</div>
+      <div class="stat-val">1</div>
+      <div class="stat-label">Entry per session</div>
     </div>
     <div class="stat">
       <div class="stat-val">∞</div>

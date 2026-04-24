@@ -1,10 +1,10 @@
 # journal-recorder — Claude Code Agent
 
-Automatically records your coding sessions as rich, shareable markdown journal entries. Triggers at conversation end, milestones, and on every `/compact`.
+Automatically records your Claude Code sessions as rich, shareable markdown journal entries. Triggers at conversation end, milestones, and on every `/compact`.
 
 Each entry includes: what was worked on, decisions made, commands run, problems solved, and action items — written so anyone with zero prior context can understand it.
 
-Entries are saved to `~/claude-journal/YYYY-MM-DD_HH-MM_<title>.md`.
+Entries are saved to a folder of your choice (you're asked once on first use, default: `~/claude-journal/`).
 
 ---
 
@@ -22,13 +22,20 @@ curl -o ~/.claude/agents/journal-recorder.md \
 
 Claude Code picks it up automatically — no restart needed.
 
-### 2. Enable auto-journaling on compaction
+### 2. Install both hooks
+
+Both hooks fire automatically. PostCompact captures every `/compact`. Stop hook captures session end with a 30-minute deduplication guard so you never get duplicate entries.
 
 ```bash
 mkdir -p ~/.claude/hooks
+
 curl -o ~/.claude/hooks/post-compact-journal.sh \
   https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-compact-journal.sh
 chmod +x ~/.claude/hooks/post-compact-journal.sh
+
+curl -o ~/.claude/hooks/post-stop-journal.sh \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-stop-journal.sh
+chmod +x ~/.claude/hooks/post-stop-journal.sh
 ```
 
 Add to `~/.claude/settings.json` (merge into existing `"hooks"` if present):
@@ -47,12 +54,38 @@ Add to `~/.claude/settings.json` (merge into existing `"hooks"` if present):
           }
         ]
       }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/post-stop-journal.sh",
+            "statusMessage": "Saving journal entry...",
+            "timeout": 90
+          }
+        ]
+      }
     ]
   }
 }
 ```
 
-The hook reads the full conversation transcript and uses `claude -p` to generate a proper journal entry after each compaction (both `/compact` and auto-compact).
+### 3. Add the mandate to CLAUDE.md (optional but recommended)
+
+This makes the main Claude agent proactively invoke journal-recorder at session end — a second layer on top of the Stop hook.
+
+Add to `~/.claude/CLAUDE.md`:
+
+```markdown
+## Session Journaling — MANDATORY
+
+Always invoke the `journal-recorder` agent before ending ANY session that involved
+tool use, code changes, decisions, or meaningful work. Do not skip it, do not wait
+to be asked.
+
+Trigger signals: "thanks", "done", "bye", "looks good", "ship it", "we're done"
+```
 
 ---
 
@@ -61,12 +94,31 @@ The hook reads the full conversation transcript and uses `claude -p` to generate
 **Automatic** — the agent fires on its own when:
 - You signal the session is ending ("we're done", "looks good", "let me go implement this")
 - A major milestone is reached
-- Every `/compact` or auto-compaction (with the hook above)
+- Every `/compact` or auto-compaction (PostCompact hook)
+- When Claude's turn ends after a substantive session (Stop hook, 30-min guard)
 
 **Manual:**
 ```
 Use the journal-recorder agent to log this session.
 ```
+
+---
+
+## Configure your journal folder
+
+On first use, Claude asks where to save entries. To set or change it at any time:
+
+```bash
+echo "~/Documents/my-journal" > ~/.claude/.journal-folder
+```
+
+All three paths (agent, PostCompact hook, Stop hook) read from this file. Default if unset: `~/claude-journal/`.
+
+---
+
+## How deduplication works
+
+All three trigger paths share a marker file `~/.claude/.journal-last-written`. Whichever fires first writes the journal and stamps the marker. The others see the marker is fresh and skip. This means you get exactly one entry per session regardless of which path triggered it.
 
 ---
 
