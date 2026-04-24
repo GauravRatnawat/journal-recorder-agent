@@ -127,7 +127,7 @@ main() {
   _activate
   _print_backend_status
 
-  local journal_dir="${JOURNAL_DIR:-$HOME/claude-journal}"
+  local journal_dir="${JOURNAL_DIR:-$HOME/Documents/Personal/journal}"
   mkdir -p "$journal_dir"
 
   cat <<DONE
@@ -135,7 +135,7 @@ main() {
 
   Hook location:  $HOOKS_DIR/post-commit
   Journal output: $journal_dir/
-  Log:            /tmp/journal-recorder.log
+  Log:            $journal_dir/journal-recorder.log
 
 Every non-merge git commit will now generate a journal entry automatically.
 

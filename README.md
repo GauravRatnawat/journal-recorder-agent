@@ -8,7 +8,7 @@ Works with **any AI coding tool** — Claude Code, Cursor, GitHub Copilot, Aider
 - **[Option B](#option-b-claude-code-agent)** — Claude Code agent (manual trigger)
 - **[Option C](#option-c-claude-code-postcompact-hook)** — Claude Code PostCompact hook (auto on `/compact`)
 
-Entries are saved to `~/claude-journal/YYYY-MM-DD_HH-MM_<title>.md`.
+Entries are saved to `~/Documents/Personal/journal/YYYY-MM-DD_HH-MM_<title>.md`.
 
 ---
 
@@ -37,7 +37,7 @@ This sets `git config --global core.hooksPath ~/.git-hooks-global` so the hook f
 ### What each entry looks like
 
 ```
-~/claude-journal/2026-04-24_14-30_fix-null-pointer-in-auth-module.md
+~/Documents/Personal/journal/2026-04-24_14-30_fix-null-pointer-in-auth-module.md
 ```
 
 ```markdown
@@ -77,7 +77,7 @@ Chose to raise ValueError (not return None) so callers can't silently ignore aut
 
 | Env var | Default | Description |
 |---------|---------|-------------|
-| `JOURNAL_DIR` | `~/claude-journal` | Where entries are saved |
+| `JOURNAL_DIR` | `~/Documents/Personal/journal` | Where entries are saved |
 | `JOURNAL_MAX_DIFF_KB` | `20` | Max diff size before truncation |
 | `JOURNAL_CLAUDE_MODEL` | `claude-sonnet-4-6` | Model for `claude` backend |
 | `JOURNAL_ANTHROPIC_MODEL` | `claude-sonnet-4-6` | Model for direct Anthropic API |
@@ -99,7 +99,7 @@ echo "$HOME/work/client-*" >> ~/.journal-recorder/ignore
 
 ```bash
 # See what the last hook run did
-cat /tmp/journal-recorder.log
+cat ~/Documents/Personal/journal/journal-recorder.log
 
 # Test the hook manually with no LLM
 BACKEND_OVERRIDE=none bash ~/.git-hooks-global/post-commit-journal.sh

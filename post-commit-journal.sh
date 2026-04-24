@@ -5,10 +5,10 @@
 
 set -euo pipefail
 
-JOURNAL_DIR="${JOURNAL_DIR:-$HOME/claude-journal}"
+JOURNAL_DIR="${JOURNAL_DIR:-$HOME/Documents/Personal/journal}"
 JOURNAL_MAX_DIFF_KB="${JOURNAL_MAX_DIFF_KB:-20}"
-_HINT_FILE="$HOME/.journal-recorder/.hinted"
-_LOG_FILE="/tmp/journal-recorder.log"
+_HINT_FILE="$HOME/Documents/Personal/journal/.hinted"
+_LOG_FILE="$HOME/Documents/Personal/journal/journal-recorder.log"
 _SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 # ── Source lib modules ────────────────────────────────────────────────────────
