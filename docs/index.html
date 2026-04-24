@@ -1,0 +1,723 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="paper">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>journal-recorder — Claude Code Agent</title>
+<meta name="description" content="Automatically records your Claude Code sessions as rich, searchable markdown journal entries.">
+<meta property="og:title" content="journal-recorder — Claude Code Agent">
+<meta property="og:description" content="Automatically records your Claude Code sessions as rich, searchable markdown journal entries.">
+<meta property="og:url" content="https://gauravratnawat.com/journal-recorder-agent/">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --serif: "Fraunces", ui-serif, Georgia, serif;
+    --sans: "Inter Tight", ui-sans-serif, system-ui, sans-serif;
+    --mono: "JetBrains Mono", ui-monospace, monospace;
+    --accent: #ff7a1a;
+    --accent-2: #f2d9a0;
+  }
+
+  [data-theme="paper"] {
+    --bg: #f5f0e8;
+    --bg-2: #ede8df;
+    --ink: #1a1814;
+    --ink-dim: #5a5550;
+    --ink-mute: #9a9590;
+    --rule: #d8d0c4;
+    --card: #eee9e0;
+  }
+
+  [data-theme="dark"] {
+    --bg: #111010;
+    --bg-2: #1a1918;
+    --ink: #e8e4dc;
+    --ink-dim: #9a9590;
+    --ink-mute: #5a5550;
+    --rule: #2a2826;
+    --card: #1e1c1a;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html {
+    font-family: var(--sans);
+    font-size: 15px;
+    background: var(--bg);
+    color: var(--ink);
+    transition: background .3s, color .3s;
+    scroll-behavior: smooth;
+  }
+
+  body {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 32px 80px;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 0;
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 80px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+
+  nav a {
+    color: var(--ink-dim);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  nav a:hover { color: var(--ink); }
+
+  nav .nav-left { display: flex; align-items: center; gap: 24px; }
+  nav .nav-right { display: flex; align-items: center; gap: 16px; }
+
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 11px;
+    font-weight: 500;
+    color: var(--ink);
+    letter-spacing: .03em;
+  }
+
+  /* THEME TOGGLE */
+  button.theme-toggle {
+    background: none;
+    border: 1px solid var(--rule);
+    color: var(--ink-dim);
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 4px 8px;
+    cursor: pointer;
+    border-radius: 2px;
+    transition: color .2s, border-color .2s;
+  }
+  button.theme-toggle:hover { color: var(--ink); border-color: var(--ink-mute); }
+
+  /* SECTIONS */
+  section { margin-bottom: 96px; }
+
+  .section-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--rule);
+  }
+
+  /* HERO */
+  .hero { margin-bottom: 96px; }
+
+  .hero-eyebrow {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--accent);
+    letter-spacing: .08em;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+  }
+
+  h1 {
+    font-family: var(--serif);
+    font-size: clamp(42px, 7vw, 72px);
+    font-weight: 300;
+    line-height: 1.05;
+    letter-spacing: -.02em;
+    color: var(--ink);
+    margin-bottom: 12px;
+  }
+
+  h1 em {
+    font-style: italic;
+    color: var(--ink-dim);
+  }
+
+  .hero-subtitle {
+    font-family: var(--sans);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--ink-dim);
+    line-height: 1.5;
+    max-width: 560px;
+    margin-bottom: 40px;
+  }
+
+  .hero-meta {
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+  }
+
+  .hero-meta span { display: flex; align-items: center; gap: 6px; }
+
+  /* BUTTONS */
+  .btn-row { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 40px; }
+
+  .btn {
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 10px 20px;
+    border-radius: 2px;
+    text-decoration: none;
+    cursor: pointer;
+    transition: all .2s;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .btn-primary {
+    background: var(--ink);
+    color: var(--bg);
+    border: 1px solid var(--ink);
+  }
+  .btn-primary:hover { background: var(--accent); border-color: var(--accent); }
+  .btn-ghost {
+    background: transparent;
+    color: var(--ink-dim);
+    border: 1px solid var(--rule);
+  }
+  .btn-ghost:hover { color: var(--ink); border-color: var(--ink-mute); }
+
+  /* WHAT */
+  .what-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 40px;
+  }
+
+  .what-card {
+    background: var(--bg);
+    padding: 28px 24px;
+  }
+
+  .what-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    margin-bottom: 12px;
+  }
+
+  .what-title {
+    font-family: var(--serif);
+    font-size: 18px;
+    font-weight: 300;
+    color: var(--ink);
+    margin-bottom: 8px;
+  }
+
+  .what-desc {
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--ink-dim);
+  }
+
+  /* INSTALL */
+  .install-steps { margin-top: 40px; }
+
+  .install-step {
+    display: grid;
+    grid-template-columns: 40px 1fr;
+    gap: 0 24px;
+    margin-bottom: 40px;
+  }
+
+  .step-num {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    padding-top: 3px;
+  }
+
+  .step-body h3 {
+    font-family: var(--sans);
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--ink);
+    margin-bottom: 12px;
+    letter-spacing: .01em;
+  }
+
+  .step-note {
+    font-size: 12px;
+    color: var(--ink-mute);
+    margin-top: 10px;
+    font-family: var(--mono);
+  }
+
+  /* CODE BLOCKS */
+  pre {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 16px 20px;
+    overflow-x: auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    color: var(--ink);
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 12px;
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    padding: 1px 5px;
+    border-radius: 2px;
+    color: var(--ink);
+  }
+
+  pre code {
+    background: none;
+    border: none;
+    padding: 0;
+  }
+
+  .comment { color: var(--ink-mute); }
+  .hl { color: var(--accent); }
+
+  /* JSON BLOCK */
+  .json-block {
+    background: var(--bg-2);
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    padding: 16px 20px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.7;
+    overflow-x: auto;
+    white-space: pre;
+    color: var(--ink);
+  }
+
+  /* ENTRY PREVIEW */
+  .entry-preview {
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 40px;
+  }
+
+  .entry-header {
+    background: var(--bg-2);
+    border-bottom: 1px solid var(--rule);
+    padding: 10px 16px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-dim);
+  }
+
+  .entry-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--rule);
+  }
+  .entry-dot.r { background: #ff5f57; }
+  .entry-dot.y { background: #febc2e; }
+  .entry-dot.g { background: #28c840; }
+
+  .entry-content {
+    padding: 24px;
+    font-family: var(--mono);
+    font-size: 12px;
+    line-height: 1.75;
+    color: var(--ink-dim);
+    white-space: pre-wrap;
+    overflow-x: auto;
+  }
+
+  .entry-content .h1 { color: var(--ink); font-size: 14px; font-weight: 500; }
+  .entry-content .h2 { color: var(--ink); font-size: 12px; }
+  .entry-content .accent { color: var(--accent); }
+  .entry-content .dim { color: var(--ink-mute); }
+
+  /* HOW IT WORKS */
+  .trigger-list {
+    margin-top: 40px;
+    display: grid;
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+  }
+
+  .trigger-item {
+    background: var(--bg);
+    padding: 20px 24px;
+    display: grid;
+    grid-template-columns: 28px 1fr auto;
+    gap: 16px;
+    align-items: center;
+  }
+
+  .trigger-icon {
+    font-size: 14px;
+    text-align: center;
+  }
+
+  .trigger-text {
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1.5;
+  }
+  .trigger-text small {
+    display: block;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+    margin-top: 2px;
+  }
+
+  .trigger-badge {
+    font-family: var(--mono);
+    font-size: 10px;
+    padding: 3px 8px;
+    border: 1px solid var(--rule);
+    border-radius: 2px;
+    color: var(--ink-mute);
+  }
+  .trigger-badge.auto { border-color: var(--accent); color: var(--accent); }
+
+  /* STAT ROW */
+  .stat-row {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2px;
+    background: var(--rule);
+    border: 1px solid var(--rule);
+    margin-top: 40px;
+  }
+
+  .stat {
+    background: var(--bg);
+    padding: 24px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: var(--serif);
+    font-size: 36px;
+    font-weight: 300;
+    color: var(--ink);
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+
+  .stat-label {
+    font-family: var(--mono);
+    font-size: 10px;
+    color: var(--ink-mute);
+    letter-spacing: .06em;
+    text-transform: uppercase;
+  }
+
+  /* FOOTER */
+  footer {
+    border-top: 1px solid var(--rule);
+    padding-top: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 12px;
+    font-family: var(--mono);
+    font-size: 11px;
+    color: var(--ink-mute);
+  }
+
+  footer a {
+    color: var(--ink-mute);
+    text-decoration: none;
+    transition: color .2s;
+  }
+  footer a:hover { color: var(--ink); }
+
+  /* RESPONSIVE */
+  @media (max-width: 640px) {
+    body { padding: 0 20px 60px; }
+    nav { margin-bottom: 48px; }
+    .hero { margin-bottom: 64px; }
+    section { margin-bottom: 64px; }
+    .what-grid { grid-template-columns: 1fr; }
+    .stat-row { grid-template-columns: 1fr; }
+    .install-step { grid-template-columns: 28px 1fr; gap: 0 16px; }
+    .trigger-item { grid-template-columns: 24px 1fr; }
+    .trigger-badge { display: none; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="nav-left">
+    <a href="https://gauravratnawat.com" class="nav-logo">GR</a>
+    <a href="https://gauravratnawat.com">← gauravratnawat.com</a>
+    <span>·</span>
+    <span>journal-recorder</span>
+  </div>
+  <div class="nav-right">
+    <a href="https://github.com/GauravRatnawat/journal-recorder-agent">GitHub ↗</a>
+    <button class="theme-toggle" onclick="toggleTheme()">◑ dark</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<div class="hero">
+  <div class="hero-eyebrow">Claude Code Agent · Open Source</div>
+  <h1>journal-<br><em>recorder.</em></h1>
+  <p class="hero-subtitle">Automatically records your Claude Code sessions as rich, searchable markdown journal entries. Fires at session end, milestones, and on every /compact.</p>
+
+  <div class="btn-row">
+    <a class="btn btn-primary" href="#install">Install in 2 steps ↓</a>
+    <a class="btn btn-ghost" href="https://github.com/GauravRatnawat/journal-recorder-agent">View on GitHub</a>
+  </div>
+
+  <div class="hero-meta">
+    <span>Shell</span>
+    <span>·</span>
+    <span>MIT License</span>
+    <span>·</span>
+    <span>Zero config</span>
+    <span>·</span>
+    <span>No trackers</span>
+  </div>
+</div>
+
+<!-- WHAT -->
+<section>
+  <div class="section-label">§ 01 / WHAT IT DOES</div>
+
+  <p style="font-size:15px;line-height:1.7;color:var(--ink-dim);max-width:620px">
+    Every Claude Code session is full of decisions, commands, and context that vanish the moment you close the tab. journal-recorder captures all of it — automatically — so you can search, reference, and hand off your work months later.
+  </p>
+
+  <div class="what-grid">
+    <div class="what-card">
+      <div class="what-num">W/01</div>
+      <div class="what-title">What was built</div>
+      <div class="what-desc">Exact files created or modified, commands run, errors hit and how they were resolved.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-num">W/02</div>
+      <div class="what-title">Why decisions were made</div>
+      <div class="what-desc">Trade-offs, reasoning, and architectural choices — written for someone with zero prior context.</div>
+    </div>
+    <div class="what-card">
+      <div class="what-num">W/03</div>
+      <div class="what-title">What's next</div>
+      <div class="what-desc">Action items extracted automatically. A new engineer could pick up exactly where you left off.</div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT FIRES -->
+<section>
+  <div class="section-label">§ 02 / WHEN IT FIRES</div>
+
+  <div class="trigger-list">
+    <div class="trigger-item">
+      <div class="trigger-icon">◉</div>
+      <div class="trigger-text">
+        Session end signals
+        <small>"we're done", "looks good", "let me go implement this"</small>
+      </div>
+      <div class="trigger-badge auto">auto</div>
+    </div>
+    <div class="trigger-item">
+      <div class="trigger-icon">◎</div>
+      <div class="trigger-text">
+        Major milestone reached
+        <small>"the authentication module is working", "tests passing"</small>
+      </div>
+      <div class="trigger-badge auto">auto</div>
+    </div>
+    <div class="trigger-item">
+      <div class="trigger-icon">◈</div>
+      <div class="trigger-text">
+        Every /compact or auto-compaction
+        <small>via PostCompact hook — fires before context is lost</small>
+      </div>
+      <div class="trigger-badge auto">auto</div>
+    </div>
+    <div class="trigger-item">
+      <div class="trigger-icon">▷</div>
+      <div class="trigger-text">
+        On demand
+        <small>"Use the journal-recorder agent to log this session."</small>
+      </div>
+      <div class="trigger-badge">manual</div>
+    </div>
+  </div>
+</section>
+
+<!-- INSTALL -->
+<section id="install">
+  <div class="section-label">§ 03 / INSTALL</div>
+
+  <p style="font-size:13px;font-family:var(--mono);color:var(--ink-mute);margin-bottom:32px">
+    Requirements: <a href="https://claude.ai/code" style="color:var(--ink-dim)">Claude Code</a> · <code>jq</code> (<code>brew install jq</code>)
+  </p>
+
+  <div class="install-steps">
+    <div class="install-step">
+      <div class="step-num">01 /</div>
+      <div class="step-body">
+        <h3>Install the agent</h3>
+        <pre><code><span class="comment"># Drop it into ~/.claude/agents/ — Claude Code picks it up automatically</span>
+mkdir -p ~/.claude/agents
+curl -o ~/.claude/agents/journal-recorder.md \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/journal-recorder.md</code></pre>
+        <div class="step-note">No restart needed. The agent is available immediately.</div>
+      </div>
+    </div>
+
+    <div class="install-step">
+      <div class="step-num">02 /</div>
+      <div class="step-body">
+        <h3>Enable auto-journaling on compaction (optional but recommended)</h3>
+        <pre><code><span class="comment"># Install the PostCompact hook</span>
+mkdir -p ~/.claude/hooks
+curl -o ~/.claude/hooks/post-compact-journal.sh \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-compact-journal.sh
+chmod +x ~/.claude/hooks/post-compact-journal.sh</code></pre>
+        <p style="font-size:13px;color:var(--ink-dim);margin:16px 0 12px;line-height:1.6">Add to <code>~/.claude/settings.json</code> (merge into existing <code>"hooks"</code> if present):</p>
+        <div class="json-block">{
+  "hooks": {
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash ~/.claude/hooks/post-compact-journal.sh",
+            "statusMessage": "Saving journal entry...",
+            "timeout": 90
+          }
+        ]
+      }
+    ]
+  }
+}</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ENTRY FORMAT -->
+<section>
+  <div class="section-label">§ 04 / WHAT ENTRIES LOOK LIKE</div>
+
+  <p style="font-size:15px;line-height:1.7;color:var(--ink-dim);max-width:620px;margin-bottom:8px">
+    Entries are saved to <code>~/claude-journal/</code> as <code>YYYY-MM-DD_HH-MM_&lt;title&gt;.md</code>. Each one is self-contained — written for a new engineer with zero prior context.
+  </p>
+
+  <div class="entry-preview">
+    <div class="entry-header">
+      <div class="entry-dot r"></div>
+      <div class="entry-dot y"></div>
+      <div class="entry-dot g"></div>
+      <span style="margin-left:8px">~/claude-journal/2026-04-23_01-00_postcompact-hook-setup-and-fix.md</span>
+    </div>
+    <div class="entry-content"><span class="h1"># PostCompact Hook Setup and Fix</span>
+
+<span class="h2">## TL;DR</span>
+<span class="dim">Configured Claude Code to auto-journal on compaction. Initial PreCompact +
+agent hook failed (unsupported outside REPL). Switched to PostCompact +
+command hook that reads the conversation transcript and generates a full
+entry via claude -p.</span>
+
+<span class="h2">## What Was Accomplished</span>
+<span class="dim">- Installed journal-recorder.md into ~/.claude/agents/
+- Wrote post-compact-journal.sh with transcript extraction logic
+- Added PostCompact hook to ~/.claude/settings.json
+- Fixed permission issue on hook script (chmod +x)
+- Verified hook fires on /compact and auto-compact</span>
+
+<span class="h2">## Key Decisions</span>
+<span class="dim">- **Decision**: PostCompact over PreCompact
+  **Why**: PreCompact hooks are unsupported outside the REPL. PostCompact
+  fires reliably and has access to the full transcript before it is pruned.</span>
+
+<span class="h2">## Action Items</span>
+<span class="dim">- [ ] Test hook on next session in a different project
+- [ ] Consider adding a daily summary cron job</span>
+
+<span class="h2">## Tags</span>
+<span class="accent">`#claude-code` `#hooks` `#automation` `#journal`</span></div>
+  </div>
+</section>
+
+<!-- STATS -->
+<section>
+  <div class="section-label">§ 05 / BY THE NUMBERS</div>
+
+  <div class="stat-row">
+    <div class="stat">
+      <div class="stat-val">0</div>
+      <div class="stat-label">Config required</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">2</div>
+      <div class="stat-label">Install steps</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">∞</div>
+      <div class="stat-label">Sessions remembered</div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <span>journal-recorder · MIT · <a href="https://github.com/GauravRatnawat/journal-recorder-agent">github.com/GauravRatnawat/journal-recorder-agent</a></span>
+  <span>by <a href="https://gauravratnawat.com">Gaurav Ratnawat</a> · Hand-coded · No trackers</span>
+</footer>
+
+<script>
+  function toggleTheme() {
+    const html = document.documentElement;
+    const isDark = html.getAttribute('data-theme') === 'dark';
+    html.setAttribute('data-theme', isDark ? 'paper' : 'dark');
+    document.querySelector('.theme-toggle').textContent = isDark ? '◑ dark' : '○ light';
+    localStorage.setItem('theme', isDark ? 'paper' : 'dark');
+  }
+
+  (function() {
+    const saved = localStorage.getItem('theme');
+    if (saved) {
+      document.documentElement.setAttribute('data-theme', saved);
+      if (saved === 'dark') {
+        document.querySelector('.theme-toggle').textContent = '○ light';
+      }
+    }
+  })();
+</script>
+</body>
+</html>
