@@ -38,10 +38,23 @@ echo "$(date +%s)" > "$HOME/.claude/.journal-last-written"
 
 ## Storage Location
 
-All journal entries must be saved to: `~/claude-journal/` directory.
-- Create this directory if it does not exist.
-- Name each file with the format: `YYYY-MM-DD_HH-MM_<short-topic-slug>.md` (e.g., `2024-01-15_14-30_auth-module-debugging.md`)
-- If multiple entries exist for the same day, append a counter suffix: `2024-01-15_14-30_auth-module-debugging_2.md`
+Run this to resolve the journal directory:
+
+```bash
+config="$HOME/.claude/.journal-folder"
+if [ -f "$config" ]; then
+  dir=$(cat "$config" | tr -d '[:space:]')
+  dir="${dir/#\~/$HOME}"
+else
+  dir="$HOME/claude-journal"
+fi
+echo "JOURNAL_DIR=$dir"
+```
+
+Use the path from `JOURNAL_DIR=...`. Create the directory if it does not exist.
+
+- Name each file: `YYYY-MM-DD_HH-MM_<short-topic-slug>.md`
+- If multiple entries for the same day, append a counter: `..._2.md`
 
 ## Journal Entry Structure
 

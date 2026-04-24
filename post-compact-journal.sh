@@ -12,7 +12,13 @@ trigger=$(echo "$input" | jq -r '.trigger // "auto"' 2>/dev/null || echo "auto")
 
 ts=$(date '+%Y-%m-%d_%H-%M')
 date_human=$(date '+%Y-%m-%d %H:%M')
-dir="$HOME/claude-journal"
+config="$HOME/.claude/.journal-folder"
+if [ -f "$config" ]; then
+  dir=$(cat "$config" | tr -d '[:space:]')
+  dir="${dir/#\~/$HOME}"
+else
+  dir="$HOME/claude-journal"
+fi
 mkdir -p "$dir"
 
 # ── Extract readable conversation from transcript ─────────────────────────────
@@ -112,4 +118,5 @@ slug=$(echo "$title_line" \
 
 filename="${ts}_${slug}.md"
 echo "$journal" > "$dir/$filename"
+echo "$(date +%s)" > "$HOME/.claude/.journal-last-written"
 echo "[post-compact-journal] saved: $dir/$filename" >&2
