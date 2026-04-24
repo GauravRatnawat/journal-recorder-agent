@@ -1,0 +1,34 @@
+diff --git a/src/auth.py b/src/auth.py
+index abc1234..def5678 100644
+--- a/src/auth.py
++++ b/src/auth.py
+@@ -10,6 +10,12 @@ def login(username, password):
+     user = db.find_user(username)
+     if not user:
+         raise ValueError("User not found")
+-    return user.token
++    if not user.verify_password(password):
++        raise ValueError("Invalid password")
++    token = generate_jwt(user.id)
++    audit_log("login", user.id)
++    return token
+
+diff --git a/tests/test_auth.py b/tests/test_auth.py
+index 111111..222222 100644
+--- a/tests/test_auth.py
++++ b/tests/test_auth.py
+@@ -1,5 +1,15 @@
+ import pytest
+ from src.auth import login
+
++def test_login_success():
++    token = login("alice", "correct_password")
++    assert token is not None
++
++def test_login_wrong_password():
++    with pytest.raises(ValueError, match="Invalid password"):
++        login("alice", "wrong_password")
++
++def test_login_unknown_user():
++    with pytest.raises(ValueError, match="User not found"):
++        login("nobody", "password")
