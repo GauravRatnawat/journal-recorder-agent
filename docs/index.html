@@ -57,9 +57,23 @@
 
   /* ── header ─────────────────────────────── */
   header { padding: 26px 0; border-bottom: 1px solid var(--rule); }
-  header .wrap { display: flex; align-items: baseline; justify-content: space-between; }
-  .brand { font-family: var(--mono); font-weight: 700; font-size: 15px; }
+  header .wrap { display: flex; align-items: center; justify-content: space-between; }
+  .brand { font-family: var(--mono); font-weight: 700; font-size: 15px; display: flex; align-items: center; gap: 14px; }
   .brand .sig { color: var(--orange); }
+  .nav-logo {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 34px; height: 34px; border-radius: 50%;
+    background: var(--ink); color: var(--bg);
+    font-family: var(--serif); font-size: 14px; font-weight: 500;
+    text-decoration: none;
+  }
+  .nav-logo:hover { background: var(--orange); color: #14100a; }
+  .back-link { color: var(--ink-dim); font-size: 14px; font-family: var(--sans); font-weight: 400; text-decoration: none; }
+  .back-link:hover { color: var(--orange); }
+  .brand .sep { color: var(--ink-mute); font-weight: 400; }
+  @media (max-width: 640px) {
+    .back-link, .brand .sep { display: none; }
+  }
   nav a { color: var(--ink-dim); margin-left: 22px; font-size: 14px; text-decoration: none; }
   nav a:hover { color: var(--orange); }
 
@@ -249,7 +263,12 @@
 
 <header>
   <div class="wrap">
-    <div class="brand"><span class="sig">§</span> journal-recorder</div>
+    <div class="brand">
+      <a href="https://gauravratnawat.com" class="nav-logo">GR</a>
+      <a href="https://gauravratnawat.com" class="back-link">← gauravratnawat.com</a>
+      <span class="sep">·</span>
+      <span><span class="sig">§</span> journal-recorder</span>
+    </div>
     <nav>
       <a href="#how">how</a>
       <a href="#features">features</a>
