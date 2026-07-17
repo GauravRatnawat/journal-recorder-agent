@@ -21,6 +21,7 @@ import datetime
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 import tempfile
@@ -358,11 +359,48 @@ def regenerate_index(project_dir):
         meta = parse_frontmatter(os.path.join(project_dir, name))
         date = str(meta.get("date", ""))[:16].replace("T", " ")
         title = meta.get("title") or name
-        tags = " ".join(f"#{t}" for t in meta.get("tags", []) if t)
+        tags = " ".join(f"#{t}" for t in meta.get("tags", []) if t and "/" not in t)
         rows.append(f"- {date} — [{title}]({name})" + (f" — {tags}" if tags else ""))
     with open(os.path.join(project_dir, "INDEX.md"), "w") as f:
         f.write(f"# Journal Index — {os.path.basename(project_dir)}\n\n")
         f.write("\n".join(rows) + "\n")
+
+
+HOME_MD = """# § Journal
+
+## Recent entries
+```dataview
+TABLE WITHOUT ID file.link AS Entry, project AS Project, dateformat(date(date), "yyyy-MM-dd HH:mm") AS Written, source AS Source
+WHERE project
+SORT date DESC
+LIMIT 20
+```
+
+## Open action items
+```dataview
+TASK
+WHERE !completed AND contains(file.tags, "#project")
+GROUP BY file.link
+```
+
+## Entries per project
+```dataview
+TABLE WITHOUT ID project AS Project, length(rows) AS Entries
+WHERE project
+GROUP BY project
+SORT length(rows) DESC
+```
+
+> Requires the **Dataview** community plugin. Without it this page shows raw queries; everything else works.
+"""
+
+
+def ensure_home(root):
+    """Create the Obsidian Dataview dashboard once; never overwrite user edits."""
+    path = os.path.join(root, "HOME.md")
+    if not os.path.exists(path):
+        with open(path, "w") as f:
+            f.write(HOME_MD)
 
 
 # ── git ──────────────────────────────────────────────────────────────────────
@@ -544,6 +582,8 @@ def cmd_write(args):
         )
 
     title = extract_title(body)
+    # nested tags (project/…, source/…) render as a tag tree in Obsidian
+    tags = [f"project/{args.project}", f"source/{args.source}"] + parse_tags(body)
     meta = {
         "title": title,
         "project": args.project,
@@ -551,12 +591,14 @@ def cmd_write(args):
         "session_id": args.session_id or "unknown",
         "source": args.source,
         "model": MODEL,
-        "tags": parse_tags(body),
+        "tags": tags,
     }
     base = f"{now.strftime('%Y-%m-%d_%H-%M')}_{slugify(title)}"
     entry_path = unique_path(project_dir, base)
+    footer = f"\n\n---\n**Project:** [[{args.project}/INDEX|{args.project}]]\n"
     with open(entry_path, "w") as f:
-        f.write(render_frontmatter(meta) + body + "\n")
+        f.write(render_frontmatter(meta) + body + footer)
+    ensure_home(root)
 
     stamp_marker(root, args.project, args.session_id)
     regenerate_index(project_dir)

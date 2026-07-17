@@ -24,6 +24,17 @@ Entries are organized **per project**, indexed, git-tracked, **auto-pushed to Gi
 
 **Requirements:** [Claude Code](https://claude.ai/code), Python 3 (preinstalled on macOS)
 
+**One command:**
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/install.sh | bash
+```
+
+Installs the engine, both hooks, the agent, and merges the hook config into `~/.claude/settings.json` (existing hooks preserved). If Codex CLI is installed (`~/.codex` exists), it also wires the [Codex notify adapter](#codex-support) and skill. Idempotent — safe to re-run, also works from a local clone (`bash install.sh`).
+
+<details>
+<summary><strong>Manual install</strong> (what the script does, step by step)</summary>
+
 ### 1. Install the engine + hooks
 
 ```bash
@@ -84,7 +95,9 @@ curl -o ~/.claude/agents/journal-recorder.md \
   https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/journal-recorder.md
 ```
 
-### 3. Add the mandate to CLAUDE.md (optional)
+</details>
+
+### Add the mandate to CLAUDE.md (optional)
 
 Makes the main Claude agent proactively invoke journal-recorder at session end — a second layer on top of the Stop hook. Add to `~/.claude/CLAUDE.md`:
 
@@ -168,6 +181,25 @@ mkdir -p ~/.agents/skills/journal-recorder
 curl -o ~/.agents/skills/journal-recorder/SKILL.md \
   https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/codex-skill/SKILL.md
 ```
+
+---
+
+## Obsidian integration
+
+The journal root is a ready-to-open Obsidian vault:
+
+```bash
+open "obsidian://open?path=$(python3 ~/.claude/hooks/journal.py resolve-dir)"
+```
+
+What you get out of the box:
+
+- **Nested tags** — every entry is tagged `project/<repo>` and `source/<stop|codex|compact|agent>` plus content tags, so the tag pane becomes a filterable tree.
+- **Wikilinks + graph** — each entry links `[[<project>/INDEX|<project>]]`; in graph view projects appear as hubs with sessions around them.
+- **`HOME.md` dashboard** — auto-created once, never overwritten. Live tables of recent entries, open action items across all projects, and entries per project. Requires the community **Dataview** plugin (Settings → Community plugins → Dataview); without it the rest still works.
+- **Frontmatter properties** — `title`, `project`, `date`, `source`, `tags` all show in Obsidian's properties panel and are queryable.
+
+On mobile: install Obsidian + the **Obsidian Git** community plugin and clone your private journal repo — every entry pushed from your machine appears on your phone.
 
 ---
 
