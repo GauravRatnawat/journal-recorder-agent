@@ -139,6 +139,28 @@ python3 ~/.claude/hooks/journal.py check         # SKIP/PROCEED dedup verdict fo
 
 ---
 
+## Codex support
+
+The same engine journals [Codex CLI](https://github.com/openai/codex) sessions. Codex has no Stop hook — instead its `notify` setting runs a program after every turn; the adapter locates the newest main-thread rollout in `~/.codex/sessions/`, extracts messages + tool calls (shell commands, function calls), and feeds the same pipeline. Entries get `source: codex`.
+
+```bash
+curl -o ~/.claude/hooks/codex-notify.sh \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/codex-notify.sh
+chmod +x ~/.claude/hooks/codex-notify.sh
+```
+
+Add to `~/.codex/config.toml`:
+
+```toml
+notify = ["/Users/<you>/.claude/hooks/codex-notify.sh"]
+```
+
+Codex supports only **one** notify command — if you already have one, edit `codex-notify.sh` to call both (it's a two-line chain script).
+
+Same dedup applies: Claude Code and Codex sessions in the same project share the per-project 30-minute marker, so you get one entry, not two.
+
+---
+
 ## Configure your journal folder
 
 ```bash

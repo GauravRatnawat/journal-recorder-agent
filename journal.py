@@ -207,6 +207,95 @@ def elide(entries):
     return "\n\n".join(head + middle + tail)
 
 
+# ── codex rollout extraction ─────────────────────────────────────────────────
+
+CODEX_SESSIONS = "~/.codex/sessions"
+CODEX_ROLLOUT_MAX_AGE_SECS = 1800
+TEXT_SKIP_MARKERS = ("<local-command", "<system-reminder",
+                     "<user_instructions", "<environment_context")
+
+
+def codex_session_meta(path):
+    """Return session_meta payload from a rollout file (first few lines)."""
+    try:
+        with open(path, errors="replace") as f:
+            for _ in range(5):
+                line = f.readline()
+                if not line:
+                    break
+                try:
+                    obj = json.loads(line)
+                except ValueError:
+                    continue
+                if obj.get("type") == "session_meta":
+                    return obj.get("payload") or {}
+    except OSError:
+        pass
+    return {}
+
+
+def find_codex_rollout(cwd):
+    """Newest recent main-thread rollout, preferring one whose cwd matches."""
+    import glob as _glob
+    pattern = os.path.join(os.path.expanduser(CODEX_SESSIONS),
+                           "*", "*", "*", "rollout-*.jsonl")
+    now = time.time()
+    files = [(os.path.getmtime(p), p) for p in _glob.glob(pattern)]
+    files = [(m, p) for m, p in files if now - m < CODEX_ROLLOUT_MAX_AGE_SECS]
+    fallback = None
+    for _, path in sorted(files, reverse=True):
+        meta = codex_session_meta(path)
+        source = meta.get("source")
+        if isinstance(source, dict) and "subagent" in source:
+            continue
+        if cwd and meta.get("cwd") == cwd:
+            return path, meta
+        if fallback is None:
+            fallback = (path, meta)
+    return fallback or (None, {})
+
+
+def extract_codex_digest(rollout_path):
+    """Return (digest_text, substantive_msg_count) from a Codex rollout JSONL."""
+    entries = []
+    substantive = 0
+    try:
+        f = open(rollout_path, errors="replace")
+    except OSError:
+        return "", 0
+    with f:
+        for line in f:
+            try:
+                obj = json.loads(line)
+            except ValueError:
+                continue
+            if obj.get("type") != "response_item":
+                continue
+            p = obj.get("payload") or {}
+            ptype = p.get("type")
+            if ptype == "message":
+                role = str(p.get("role", ""))
+                if role not in ("user", "assistant"):
+                    continue
+                texts = [c.get("text", "") for c in (p.get("content") or [])
+                         if isinstance(c, dict)
+                         and c.get("type") in ("input_text", "output_text")]
+                text = " ".join(t for t in texts if t).strip()
+                if any(m in text for m in TEXT_SKIP_MARKERS):
+                    continue
+                if len(text) > SUBSTANTIVE_TEXT_CHARS:
+                    substantive += 1
+                if len(text) >= 10:
+                    entries.append(f"{role.upper()}: {text[:2000]}")
+            elif ptype == "custom_tool_call":
+                name = p.get("name", "?")
+                entries.append(f"TOOL[{name}]: {str(p.get('input', ''))[:300]}")
+            elif ptype == "function_call":
+                name = p.get("name", "?")
+                entries.append(f"TOOL[{name}]: {str(p.get('arguments', ''))[:200]}")
+    return elide(entries), substantive
+
+
 # ── frontmatter & index ──────────────────────────────────────────────────────
 
 def render_frontmatter(meta):
@@ -366,6 +455,11 @@ def cmd_hook(source):
         log_line(f"skip project={project} source={source} reason=no-content")
         return 0
 
+    spawn_writer(root, project, session_id, source, digest)
+    return 0
+
+
+def spawn_writer(root, project, session_id, source, digest):
     fd, tmp = tempfile.mkstemp(prefix="journal-digest-", suffix=".txt")
     with os.fdopen(fd, "w") as f:
         f.write(digest)
@@ -380,6 +474,46 @@ def cmd_hook(source):
         start_new_session=True,
     )
     log_line(f"spawned writer project={project} source={source} chars={len(digest)}")
+
+
+def cmd_hook_codex(payload_arg):
+    """Codex notify adapter. Codex passes the notification JSON as an argv
+    argument, not stdin; the payload has no transcript path, so we locate the
+    newest main-thread rollout ourselves."""
+    data = {}
+    if payload_arg:
+        try:
+            data = json.loads(payload_arg)
+        except ValueError:
+            pass
+    if not isinstance(data, dict):
+        data = {}
+    ntype = data.get("type", "")
+    if ntype and ntype != "agent-turn-complete":
+        return 0
+
+    cwd = data.get("cwd") or os.getcwd()
+    rollout, meta = find_codex_rollout(cwd)
+    if not rollout:
+        log_line("skip source=codex reason=no-recent-rollout")
+        return 0
+
+    project = project_slug(meta.get("cwd") or cwd)
+    root = journal_root()
+    if is_duplicate(root, project, int(time.time())):
+        log_line(f"skip project={project} source=codex reason=recent-journal")
+        return 0
+
+    digest, substantive = extract_codex_digest(rollout)
+    if not digest:
+        log_line(f"skip project={project} source=codex reason=no-content")
+        return 0
+    if substantive < MIN_SUBSTANTIVE_MSGS:
+        log_line(f"skip project={project} source=codex reason=trivial msgs={substantive}")
+        return 0
+
+    session_id = meta.get("id") or meta.get("session_id") or ""
+    spawn_writer(root, project, session_id, "codex", digest)
     return 0
 
 
@@ -513,7 +647,8 @@ def main():
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_hook = sub.add_parser("hook")
-    p_hook.add_argument("source", choices=["stop", "compact"])
+    p_hook.add_argument("source", choices=["stop", "compact", "codex"])
+    p_hook.add_argument("payload", nargs="?", default="")
 
     p_write = sub.add_parser("write")
     p_write.add_argument("--digest-file", required=True)
@@ -531,6 +666,8 @@ def main():
 
     args = parser.parse_args()
     if args.cmd == "hook":
+        if args.source == "codex":
+            return cmd_hook_codex(args.payload)
         return cmd_hook(args.source)
     if args.cmd == "write":
         return cmd_write(args)
