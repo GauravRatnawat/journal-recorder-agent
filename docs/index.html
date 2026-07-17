@@ -325,7 +325,7 @@
     <h1>Your AI coding sessions,<br><em>journaled</em> while you sleep.</h1>
     <p class="sub">Every <strong>Claude Code</strong> and <strong>Codex</strong> session becomes a rich markdown journal entry — commands run, files touched, decisions made. Sorted <strong>per project</strong>, indexed, committed, and <strong>pushed to your private GitHub</strong>. You never lift a finger.</p>
     <div class="cta-row">
-      <a class="btn primary" href="#install">Install in 2 minutes</a>
+      <a class="btn primary" href="#install">Install — one command</a>
       <a class="btn" href="https://github.com/GauravRatnawat/journal-recorder-agent">View source →</a>
     </div>
   </div>
@@ -361,7 +361,7 @@
       <div class="step">
         <div class="n">03</div>
         <h3>Detached writer</h3>
-        <p>A background process writes the entry via <code>claude -p</code> on Haiku, updates <code>INDEX.md</code>, commits, and pushes to your remote. Survives you closing the terminal.</p>
+        <p>A background process writes the entry via <code>claude -p</code> on Haiku — or <code>codex exec</code> on Codex-only machines — updates <code>INDEX.md</code>, commits, and pushes to your remote. Survives you closing the terminal.</p>
       </div>
     </div>
   </div>
@@ -390,7 +390,7 @@
       </div>
       <div class="row">
         <h3>Never silent, never lost</h3>
-        <p>Every run logs one line to <code>.journal.log</code>. If generation fails — token limits, rate limits, timeouts — a fallback entry with the raw session digest is written instead.</p>
+        <p>Every run logs one line to <code>.journal.log</code>. If <code>claude -p</code> fails — token limits, rate limits, timeouts — generation falls back to <code>codex exec</code>, and if that fails too, a fallback entry with the raw session digest is written instead.</p>
       </div>
       <div class="row">
         <h3>Frontmatter + weekly digests</h3>
@@ -450,31 +450,17 @@ model: haiku · tags: [typescript, auth, debugging]
 <section id="install" class="install">
   <div class="wrap">
     <div class="kicker">install</div>
-    <h2>Two minutes, three curls.</h2>
+    <h2>One command.</h2>
 
-    <h3>1 — Engine + hooks</h3>
-    <pre>mkdir -p ~/.claude/hooks
-<span class="k">curl</span> -o ~/.claude/hooks/journal.py \
-  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/journal.py
-<span class="k">curl</span> -o ~/.claude/hooks/post-stop-journal.sh \
-  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-stop-journal.sh
-<span class="k">curl</span> -o ~/.claude/hooks/post-compact-journal.sh \
-  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/post-compact-journal.sh
-<span class="k">chmod</span> +x ~/.claude/hooks/post-*.sh</pre>
-    <p class="note">Then wire <code>Stop</code> + <code>PostCompact</code> hooks in <code>~/.claude/settings.json</code> — <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install">exact JSON in the README</a>.</p>
+    <pre><span class="k">curl</span> -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/install.sh | <span class="k">bash</span></pre>
+    <p class="note">Engine, both hooks, the agent, and the <code>settings.json</code> merge (existing hooks preserved). If Codex CLI is installed, the notify adapter and skill get wired too. Idempotent — safe to re-run. Prefer to see every step? <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install">Manual install in the README</a>.</p>
 
-    <h3>2 — GitHub sync (optional, one command)</h3>
+    <h3>GitHub sync (optional, one command)</h3>
     <pre><span class="k">cd</span> "$(python3 ~/.claude/hooks/journal.py resolve-dir)"
 <span class="k">gh</span> repo create claude-journal --private --source . --push</pre>
     <p class="note">Every entry after this pushes itself.</p>
 
-    <h3>3 — Codex (optional)</h3>
-    <pre><span class="k">curl</span> -o ~/.claude/hooks/codex-notify.sh \
-  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/codex-notify.sh
-<span class="k">chmod</span> +x ~/.claude/hooks/codex-notify.sh
-<span class="c"># ~/.codex/config.toml</span>
-notify = [<span class="k">"/Users/&lt;you&gt;/.claude/hooks/codex-notify.sh"</span>]</pre>
-    <p class="note">Requirements: <a href="https://claude.ai/code">Claude Code</a> + Python 3. That's the whole stack — no daemons, no databases, no dependencies.</p>
+    <p class="note">Requirements: <a href="https://claude.ai/code">Claude Code</a> or <a href="https://github.com/openai/codex">Codex CLI</a> — either one — plus Python 3. That's the whole stack — no daemons, no databases, no dependencies.</p>
   </div>
 </section>
 
