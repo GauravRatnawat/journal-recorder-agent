@@ -186,11 +186,13 @@ curl -o ~/.agents/skills/journal-recorder/SKILL.md \
 
 ## Obsidian integration
 
-The journal root is a ready-to-open Obsidian vault:
+The **journal root itself is the vault** — open it directly:
 
 ```bash
 open "obsidian://open?path=$(python3 ~/.claude/hooks/journal.py resolve-dir)"
 ```
+
+Or manually in Obsidian: **Open folder as vault** → pick your journal root (default `~/claude-journal` — not a project subfolder, the root). `HOME.md` is the dashboard; each project is a folder inside the vault.
 
 What you get out of the box:
 
