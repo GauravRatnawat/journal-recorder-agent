@@ -79,6 +79,13 @@
 
   /* ── hero ───────────────────────────────── */
   .hero { padding: 84px 0 44px; }
+  .entry-no {
+    font-family: var(--mono);
+    font-size: 12.5px;
+    color: var(--orange);
+    margin-bottom: 18px;
+  }
+  .entry-no .dim { color: var(--ink-mute); }
   .hero h1 {
     font-family: var(--serif);
     font-weight: 300;
@@ -156,9 +163,12 @@
   section { padding: 72px 0; border-top: 1px solid var(--rule); }
   .kicker {
     font-family: var(--mono);
-    font-size: 12px; letter-spacing: .18em; text-transform: uppercase;
+    font-size: 12px; letter-spacing: .14em; text-transform: lowercase;
     color: var(--orange); margin-bottom: 14px;
   }
+  .kicker::before, .kicker::after { content: "---"; color: var(--ink-mute); letter-spacing: 0; }
+  .kicker::before { margin-right: 10px; }
+  .kicker::after { margin-left: 10px; }
   h2 {
     font-family: var(--serif);
     font-weight: 300;
@@ -181,23 +191,50 @@
   .step p { font-size: 14.5px; color: var(--ink-dim); }
   @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
 
-  /* features */
-  .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 36px 48px; }
-  @media (max-width: 720px) { .grid { grid-template-columns: 1fr; } }
-  .feat h3 { font-family: var(--serif); font-weight: 500; font-size: 19px; margin-bottom: 8px; }
-  .feat h3 .m { color: var(--green); margin-right: 8px; font-family: var(--mono); font-size: 16px; }
-  .feat p { font-size: 14.5px; color: var(--ink-dim); }
+  /* ledger — features as INDEX.md rows */
+  .ledger { border-top: 1px solid var(--rule); }
+  .ledger .row {
+    display: grid; grid-template-columns: 250px 1fr; gap: 8px 28px;
+    padding: 20px 14px;
+    border-bottom: 1px solid var(--rule);
+    transition: background .15s;
+  }
+  .ledger .row:hover { background: var(--card); }
+  .ledger h3 { font-family: var(--serif); font-weight: 500; font-size: 18px; line-height: 1.35; }
+  .ledger p { font-size: 14.5px; color: var(--ink-dim); }
+  @media (max-width: 720px) { .ledger .row { grid-template-columns: 1fr; } }
 
-  /* entry example — ruled journal card */
+  /* entry example — the notebook page (signature) */
+  #entry { background: var(--bg-2); }
   .paper-card {
-    background: var(--card);
+    position: relative;
+    background-color: var(--card);
+    background-image: repeating-linear-gradient(
+      to bottom,
+      transparent 0px, transparent 27px,
+      rgba(120, 100, 70, .12) 27px, rgba(120, 100, 70, .12) 28px
+    );
     border: 1px solid var(--rule);
-    border-radius: 12px;
-    padding: 40px 44px 44px;
-    box-shadow: 0 20px 50px -30px rgba(26, 24, 20, .35);
+    border-radius: 3px;
+    padding: 44px 44px 48px 72px;
+    box-shadow: 0 1px 0 rgba(26,24,20,.06), 0 26px 55px -30px rgba(26, 24, 20, .45);
     max-width: 680px;
     margin: 0 auto;
     overflow-x: auto;
+  }
+  .paper-card::before {
+    content: ""; position: absolute; top: 0; bottom: 0; left: 52px;
+    width: 1px; background: rgba(224, 96, 79, .4);
+  }
+  .paper-card .stamp {
+    position: absolute; top: 18px; right: 20px;
+    font-family: var(--mono); font-size: 10.5px; letter-spacing: .08em;
+    color: rgba(224, 96, 79, .75);
+    border: 1px solid rgba(224, 96, 79, .45);
+    border-radius: 3px;
+    padding: 3px 8px;
+    transform: rotate(-2deg);
+    text-transform: uppercase;
   }
   .paper-card .fm {
     font-family: var(--mono);
@@ -205,6 +242,10 @@
     border-bottom: 1px solid var(--rule);
     padding-bottom: 14px; margin-bottom: 22px;
     white-space: pre-wrap;
+  }
+  @media (max-width: 560px) {
+    .paper-card { padding-left: 48px; }
+    .paper-card::before { left: 32px; }
   }
   .paper-card h3 {
     font-family: var(--serif); font-weight: 400;
@@ -280,6 +321,7 @@
 
 <div class="hero">
   <div class="wrap">
+    <div class="entry-no">entry № 941 <span class="dim">— nobody wrote it. everybody can read it.</span></div>
     <h1>Your AI coding sessions,<br><em>journaled</em> while you sleep.</h1>
     <p class="sub">Every <strong>Claude Code</strong> and <strong>Codex</strong> session becomes a rich markdown journal entry — commands run, files touched, decisions made. Sorted <strong>per project</strong>, indexed, committed, and <strong>pushed to your private GitHub</strong>. You never lift a finger.</p>
     <div class="cta-row">
@@ -303,7 +345,7 @@
 
 <section id="how">
   <div class="wrap">
-    <div class="kicker">How it works</div>
+    <div class="kicker">the pipeline</div>
     <h2>Hooks in front. Writer out back.</h2>
     <div class="steps">
       <div class="step">
@@ -327,31 +369,31 @@
 
 <section id="features">
   <div class="wrap">
-    <div class="kicker">Features</div>
+    <div class="kicker">the ledger</div>
     <h2>Everything captured. Nothing lost.</h2>
-    <div class="grid">
-      <div class="feat">
-        <h3><span class="m">✓</span>Real commands, real files</h3>
+    <div class="ledger">
+      <div class="row">
+        <h3>Real commands, real files</h3>
         <p>Tool calls feed the writer, so "Commands Run" and "Files Modified" sections are extracted, not hallucinated.</p>
       </div>
-      <div class="feat">
-        <h3><span class="m">✓</span>Per-project folders</h3>
+      <div class="row">
+        <h3>Per-project folders</h3>
         <p>Each repo gets its own subfolder, its own <code>INDEX.md</code>, its own 30-minute dedup marker. Parallel projects never block each other.</p>
       </div>
-      <div class="feat">
-        <h3><span class="m">✓</span>Claude Code + Codex</h3>
+      <div class="row">
+        <h3>Claude Code + Codex</h3>
         <p>One engine, both tools. Same project, same window → one entry, whichever finishes first. Codex rollouts parsed natively.</p>
       </div>
-      <div class="feat">
-        <h3><span class="m">✓</span>Auto-push to GitHub</h3>
+      <div class="row">
+        <h3>Auto-push to GitHub</h3>
         <p>Journal root is a git repo. Every entry commits and pushes to your private remote. Offline? Next push carries the backlog.</p>
       </div>
-      <div class="feat">
-        <h3><span class="m">✓</span>Never silent, never lost</h3>
+      <div class="row">
+        <h3>Never silent, never lost</h3>
         <p>Every run logs one line to <code>.journal.log</code>. If generation fails — token limits, rate limits, timeouts — a fallback entry with the raw session digest is written instead.</p>
       </div>
-      <div class="feat">
-        <h3><span class="m">✓</span>Frontmatter + weekly digests</h3>
+      <div class="row">
+        <h3>Frontmatter + weekly digests</h3>
         <p>YAML frontmatter on every entry — Obsidian-friendly. <code>journal.py digest --days 7</code> rolls the week into one page.</p>
       </div>
     </div>
@@ -360,10 +402,11 @@
 
 <section id="entry">
   <div class="wrap">
-    <div class="kicker">The output</div>
+    <div class="kicker">specimen entry</div>
     <h2>Entries a stranger could pick up cold.</h2>
     <p class="lede">Written for a reader with zero context. Exact paths, verbatim commands, the why behind each decision.</p>
     <div class="paper-card">
+      <div class="stamp">source: stop · auto</div>
       <div class="fm">---
 title: Auth Refactor — Token Expiry Fix
 project: my-repo · date: 2026-07-17T14:30 · source: stop
@@ -390,7 +433,7 @@ model: haiku · tags: [typescript, auth, debugging]
 
 <section id="layout">
   <div class="wrap">
-    <div class="kicker">On disk</div>
+    <div class="kicker">on disk</div>
     <h2>One repo. Every project. Full history.</h2>
     <pre class="tree">~/claude-journal/                <span class="hl">← git repo, auto-pushed</span>
 ├── <span class="d">my-repo/</span>
@@ -406,7 +449,7 @@ model: haiku · tags: [typescript, auth, debugging]
 
 <section id="install" class="install">
   <div class="wrap">
-    <div class="kicker">Install</div>
+    <div class="kicker">install</div>
     <h2>Two minutes, three curls.</h2>
 
     <h3>1 — Engine + hooks</h3>
