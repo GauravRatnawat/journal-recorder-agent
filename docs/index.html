@@ -14,9 +14,13 @@
 <meta property="og:title" content="journal-recorder — auto-journal for Claude Code &amp; Codex">
 <meta property="og:description" content="Every AI coding session becomes a rich markdown journal entry — per project, indexed, Obsidian-ready, auto-pushed to GitHub. For your memory, not the machine's.">
 <meta property="og:url" content="https://gauravratnawat.com/journal-recorder-agent/">
-<meta name="twitter:card" content="summary">
+<meta property="og:image" content="https://gauravratnawat.com/journal-recorder-agent/og-image.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="journal-recorder — auto-journal for Claude Code &amp; Codex">
 <meta name="twitter:description" content="Every AI coding session becomes a rich markdown journal entry — per project, indexed, Obsidian-ready, auto-pushed to GitHub.">
+<meta name="twitter:image" content="https://gauravratnawat.com/journal-recorder-agent/og-image.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script type="application/ld+json">
 {
@@ -322,6 +326,12 @@
   .tree .d { color: var(--ink); font-weight: 500; }
   .tree .hl { color: var(--green); }
 
+  /* faq */
+  .faq dl { max-width: 680px; }
+  .faq dt { font-family: var(--serif); font-weight: 500; font-size: 19px; margin-top: 26px; }
+  .faq dt:first-child { margin-top: 0; }
+  .faq dd { margin-top: 6px; font-size: 14.5px; color: var(--ink-dim); }
+
   /* footer */
   footer {
     border-top: 1px solid var(--rule);
@@ -525,6 +535,44 @@ model: haiku · tags: [typescript, auth, debugging]
     <p class="note">Requirements: <a href="https://claude.ai/code">Claude Code</a> or <a href="https://github.com/openai/codex">Codex CLI</a> — either one — plus Python 3. That's the whole stack — no daemons, no databases, no dependencies.</p>
   </div>
 </section>
+
+<section id="faq" class="faq">
+  <div class="wrap">
+    <div class="kicker">questions</div>
+    <h2>Asked often.</h2>
+    <dl>
+      <dt>Is this agent memory for Claude or Codex?</dt>
+      <dd>No. Claude and Codex have their own memory systems for carrying context between sessions. journal-recorder is for <em>you</em> — a human-readable record so you can remember what you did and find it later.</dd>
+      <dt>Does it slow down my sessions?</dt>
+      <dd>No. The hook exits in under a second; journal generation runs in a detached background process on Haiku and survives you closing the terminal.</dd>
+      <dt>Does it work with both Claude Code and Codex CLI?</dt>
+      <dd>Yes — one engine, both tools. Claude Code via Stop/PostCompact hooks, Codex via its notify setting. Same project within 30 minutes journals once, not twice.</dd>
+      <dt>Where do entries live?</dt>
+      <dd>In a local folder (default <code>~/claude-journal</code>) organized per project — which is also a git repo, an Obsidian vault, and auto-pushed to your private GitHub if you configure a remote.</dd>
+      <dt>What happens when generation fails — rate limits, token limits?</dt>
+      <dd>A fallback entry with the raw session digest is written instead, and the failure is logged. No session is ever silently lost.</dd>
+    </dl>
+  </div>
+</section>
+
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    { "@type": "Question", "name": "Is journal-recorder agent memory for Claude or Codex?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. Claude and Codex have their own memory systems for carrying context between sessions. journal-recorder is for the human — a readable record so you can remember what you did and find it later." } },
+    { "@type": "Question", "name": "Does journal-recorder slow down coding sessions?",
+      "acceptedAnswer": { "@type": "Answer", "text": "No. The hook exits in under a second; journal generation runs in a detached background process on Haiku and survives closing the terminal." } },
+    { "@type": "Question", "name": "Does it work with both Claude Code and Codex CLI?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Yes — one engine, both tools. Claude Code via Stop and PostCompact hooks, Codex via its notify setting. The same project within 30 minutes is journaled once." } },
+    { "@type": "Question", "name": "Where are journal entries stored?",
+      "acceptedAnswer": { "@type": "Answer", "text": "In a local folder (default ~/claude-journal) organized per project — also a git repo, an Obsidian vault, and auto-pushed to a private GitHub remote if configured." } },
+    { "@type": "Question", "name": "What happens when journal generation fails due to rate or token limits?",
+      "acceptedAnswer": { "@type": "Answer", "text": "A fallback entry containing the raw session digest is written instead, and the failure is logged. No session is silently lost." } }
+  ]
+}
+</script>
 
 <footer>
   <div class="wrap">

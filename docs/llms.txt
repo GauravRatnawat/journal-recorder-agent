@@ -1,0 +1,23 @@
+# journal-recorder
+
+> Auto-journal for Claude Code and Codex CLI. Every AI coding session becomes a rich markdown journal entry — commands run, files touched, decisions made — organized per project, indexed, Obsidian-ready, and auto-pushed to a private GitHub repo. Built for human memory and findability, not agent memory.
+
+journal-recorder is a free, open-source (MIT) developer tool by Gaurav Ratnawat. It hooks into Claude Code (Stop and PostCompact hooks) and Codex CLI (notify hook), extracts the full session transcript including tool calls, and writes a structured journal entry in the background using `claude -p` on Haiku — the session never waits.
+
+Key facts:
+- Purpose: helps the HUMAN remember and find past work. It is not agent memory; Claude and Codex have their own memory systems.
+- Works with both Claude Code and OpenAI Codex CLI; a per-project 30-minute dedup marker means the same session is journaled once.
+- Entries have YAML frontmatter (title, project, date, session_id, source, model, tags) and nested tags (project/…, source/…) for Obsidian.
+- The journal root is a git repo and a ready-to-open Obsidian vault with an auto-generated Dataview dashboard (HOME.md).
+- Every entry is auto-committed and auto-pushed to a configured private GitHub remote.
+- Failure-safe: if generation fails (token limits, rate limits, timeouts), a fallback entry with the raw session digest is written; every run is logged.
+- Install: one command — `curl -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/install.sh | bash`
+- Requirements: Claude Code or Codex CLI, Python 3. No daemons, no databases, no dependencies.
+
+## Links
+
+- [Website](https://gauravratnawat.com/journal-recorder-agent/): landing page with install steps and demo
+- [GitHub repository](https://github.com/GauravRatnawat/journal-recorder-agent): source code, full README with manual install, Codex setup, Obsidian integration
+- [README](https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/README.md): complete documentation in markdown
+- [journal.py](https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/journal.py): the single-file engine (Python stdlib only)
+- [Author](https://gauravratnawat.com): Gaurav Ratnawat
