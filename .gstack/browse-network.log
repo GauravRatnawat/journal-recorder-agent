@@ -1,0 +1,6 @@
+[2026-04-24T22:42:56.440Z] GET http://localhost:8743/ → 200 (3ms, 19887B)
+[2026-04-24T22:42:56.446Z] GET https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Inter+Tight:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap → 200 (102ms, 21918B)
+[2026-04-24T22:42:56.580Z] GET https://fonts.gstatic.com/s/jetbrainsmono/v24/tDbv2o-flEEny0FZhsfKu5WU4zr3E_BX0PnT8RD8yKwBNntkaToggR7BYRbKPxDcwgknk-4.woff2 → 200 (107ms, 31340B)
+[2026-04-24T22:42:56.580Z] GET https://fonts.gstatic.com/s/fraunces/v38/6NU78FyLNQOQZAnv9bYEvDiIdE9Ea92uemAk_WBq8U_9v0c2Wa0KxC9TeP2Xz5c.woff2 → 200 (127ms, 67388B)
+[2026-04-24T22:42:56.580Z] GET https://fonts.gstatic.com/s/fraunces/v38/6NU58FyLNQOQZAnv9ZwNjucMHVn85Ni7emAe9lKqZTnbB-gzTK0K1ChjeveQ7ZXk8g.woff2 → 200 (127ms, 81704B)
+[2026-04-24T22:42:56.580Z] GET https://fonts.gstatic.com/s/intertight/v9/NGSwv5HMAFg6IuGlBNMjxLsH8ahuQ2e8.woff2 → 200 (122ms, 44916B)

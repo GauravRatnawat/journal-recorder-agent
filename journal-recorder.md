@@ -12,55 +12,44 @@ Your primary responsibility is to create rich, informative journal entries that 
 
 ## Idempotency Check — Run This First
 
-Before writing anything, run this exact Bash command to check if a journal was written recently:
+Before writing anything, run:
 
 ```bash
-marker="$HOME/.claude/.journal-last-written"
-if [ -f "$marker" ]; then
-  last_ts=$(cat "$marker" 2>/dev/null || echo 0)
-  now=$(date +%s)
-  age=$(( now - last_ts ))
-  if [ "$age" -lt 1800 ]; then
-    echo "SKIP: journal written $((age / 60)) min ago — skipping duplicate"
-    exit 0
-  fi
-fi
-echo "PROCEED: no recent journal found"
+python3 "$HOME/.claude/hooks/journal.py" check
 ```
 
-If the output is `SKIP: ...` — stop immediately. Do not write an entry. Report back: "Journal already written N min ago — skipping duplicate."
+If the output is `SKIP: ...` — stop immediately. Do not write an entry. Report back: "Journal already written recently for this project — skipping duplicate."
 
-If the output is `PROCEED: ...` — continue with the entry below, and after successfully writing the file, update the marker:
-
-```bash
-echo "$(date +%s)" > "$HOME/.claude/.journal-last-written"
-```
+If the output is `PROCEED: <path>` — that path is the project's journal directory. Continue with the entry below.
 
 ## Storage Location
 
-Run this to resolve the journal directory:
-
-```bash
-config="$HOME/.claude/.journal-folder"
-if [ -f "$config" ]; then
-  dir=$(cat "$config" | tr -d '[:space:]')
-  dir="${dir/#\~/$HOME}"
-else
-  dir="$HOME/claude-journal"
-fi
-echo "JOURNAL_DIR=$dir"
-```
-
-Use the path from `JOURNAL_DIR=...`. Create the directory if it does not exist.
+The `PROCEED:` output above gives you the exact directory (journal root + per-project subfolder, e.g. `~/claude-journal/my-repo/`). Create it if it does not exist.
 
 - Name each file: `YYYY-MM-DD_HH-MM_<short-topic-slug>.md`
 - If multiple entries for the same day, append a counter: `..._2.md`
+
+## After Writing the Entry — Finalize
+
+Run this once, from the project directory, after the entry file is saved. It stamps the dedup marker, rebuilds the project's `INDEX.md`, and git-commits the journal repo:
+
+```bash
+python3 "$HOME/.claude/hooks/journal.py" finalize
+```
 
 ## Journal Entry Structure
 
 Each journal entry must follow this template. Write it so that **any new engineer with no prior context** can read it and fully understand what was done, why, and how to reproduce or continue the work.
 
 ```markdown
+---
+title: [Short descriptive title]
+project: [project folder name]
+date: [ISO timestamp, e.g. 2026-07-17T14:30:00+02:00]
+source: agent
+tags: [tag1, tag2, tag3]
+---
+
 # Journal Entry — [Date & Time]
 
 ## Session Summary

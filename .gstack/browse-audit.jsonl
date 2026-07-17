@@ -1,0 +1,32 @@
+{"ts":"2026-04-24T22:06:17.310Z","cmd":"goto","args":"https://gauravratnawat.com","origin":"https://gauravratnawat.com/","durationMs":646,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:17.372Z","cmd":"screenshot","args":"/tmp/gaurav-home.png","origin":"https://gauravratnawat.com/","durationMs":30,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:23.037Z","cmd":"wait","args":"--networkidle","origin":"https://gauravratnawat.com/","durationMs":0,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:23.609Z","cmd":"screenshot","args":"/tmp/gaurav-home2.png","origin":"https://gauravratnawat.com/","durationMs":542,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:30.635Z","cmd":"html","args":"","origin":"https://gauravratnawat.com/","durationMs":9,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:35.641Z","cmd":"text","args":"","origin":"about:blank","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:41.377Z","cmd":"goto","args":"https://gauravratnawat.com","origin":"https://gauravratnawat.com/","durationMs":543,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:42.262Z","cmd":"wait","args":"--networkidle","origin":"https://gauravratnawat.com/","durationMs":852,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:06:42.296Z","cmd":"text","args":"","origin":"https://gauravratnawat.com/","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:24.719Z","cmd":"goto","args":"file:///Users/gaurav.ratnawat/Documents/Personal/Dev/journal-recorder-agent/docs/index.html","origin":"about:blank","durationMs":3,"status":"error","hasCookies":false,"mode":"launched","error":"Blocked: scheme \"file:\" is not allowed. Only http: and https: URLs are permitted."}
+{"ts":"2026-04-24T22:18:24.756Z","cmd":"wait","args":"--load","origin":"about:blank","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:24.824Z","cmd":"screenshot","args":"/tmp/journal-page-light.png","origin":"about:blank","durationMs":39,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:30.630Z","cmd":"goto","args":"http://localhost:8743/","origin":"http://localhost:8743/","durationMs":174,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:31.287Z","cmd":"wait","args":"--networkidle","origin":"http://localhost:8743/","durationMs":624,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:31.430Z","cmd":"screenshot","args":"/tmp/journal-page-preview.png","origin":"http://localhost:8743/","durationMs":97,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:42.912Z","cmd":"js","args":"document.documentElement.setAttribute('data-theme','dark')","origin":"about:blank","durationMs":2,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:42.970Z","cmd":"screenshot","args":"/tmp/journal-page-dark.png","origin":"about:blank","durationMs":25,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:51.051Z","cmd":"goto","args":"http://localhost:8743/","origin":"http://localhost:8743/","durationMs":303,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:51.692Z","cmd":"wait","args":"--networkidle","origin":"http://localhost:8743/","durationMs":607,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:51.744Z","cmd":"js","args":"document.documentElement.setAttribute('data-theme','dark');document.querySelector('.theme-toggle').textContent='○ light';","origin":"http://localhost:8743/","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:18:51.877Z","cmd":"screenshot","args":"/tmp/journal-dark2.png","origin":"http://localhost:8743/","durationMs":97,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:19:55.776Z","cmd":"goto","args":"https://gauravratnawat.com/journal-recorder-agent/","origin":"https://gauravratnawat.com/journal-recorder-agent/","durationMs":399,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:19:56.432Z","cmd":"wait","args":"--networkidle","origin":"https://gauravratnawat.com/journal-recorder-agent/","durationMs":621,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:19:56.600Z","cmd":"screenshot","args":"/tmp/journal-live.png","origin":"https://gauravratnawat.com/journal-recorder-agent/","durationMs":115,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:08.192Z","cmd":"goto","args":"https://gauravratnawat.com","origin":"https://gauravratnawat.com/","durationMs":684,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:09.257Z","cmd":"wait","args":"--networkidle","origin":"https://gauravratnawat.com/","durationMs":1033,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:09.501Z","cmd":"download","args":"https://gauravratnawat.com/favicon.svg /tmp/gaurav-favicon.svg","origin":"https://gauravratnawat.com/","durationMs":211,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:09.689Z","cmd":"download","args":"https://gauravratnawat.com/favicon.png /tmp/gaurav-favicon.png","origin":"https://gauravratnawat.com/","durationMs":153,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:56.582Z","cmd":"goto","args":"http://localhost:8743/","origin":"http://localhost:8743/","durationMs":148,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:57.211Z","cmd":"wait","args":"--networkidle","origin":"http://localhost:8743/","durationMs":596,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:42:57.376Z","cmd":"screenshot","args":"/tmp/favicon-check.png","origin":"http://localhost:8743/","durationMs":115,"status":"ok","hasCookies":false,"mode":"launched"}
+{"ts":"2026-04-24T22:43:01.066Z","cmd":"js","args":"document.querySelector('link[rel=icon]')?.href","origin":"http://localhost:8743/","durationMs":1,"status":"ok","hasCookies":false,"mode":"launched"}
