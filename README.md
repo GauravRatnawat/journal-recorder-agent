@@ -159,6 +159,14 @@ Codex supports only **one** notify command — if you already have one, edit `co
 
 Same dedup applies: Claude Code and Codex sessions in the same project share the per-project 30-minute marker, so you get one entry, not two.
 
+**Optional — on-demand skill for Codex** (ask Codex "journal this session" anytime):
+
+```bash
+mkdir -p ~/.agents/skills/journal-recorder
+curl -o ~/.agents/skills/journal-recorder/SKILL.md \
+  https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/codex-skill/SKILL.md
+```
+
 ---
 
 ## Configure your journal folder
