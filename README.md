@@ -22,7 +22,7 @@ Entries are organized **per project**, indexed, git-tracked, **auto-pushed to Gi
 
 ## Install
 
-**Requirements:** [Claude Code](https://claude.ai/code), Python 3 (preinstalled on macOS)
+**Requirements:** [Claude Code](https://claude.ai/code) or [Codex CLI](https://github.com/openai/codex) (either works — generation prefers `claude -p`, falls back to `codex exec`), Python 3 (preinstalled on macOS)
 
 **One command:**
 
@@ -244,7 +244,8 @@ Nothing fails silently, and no session content is ever lost:
 |---|---|
 | `claude -p` fails (token limit, rate limit, API error) | Fallback entry written with the raw session digest — messages, commands, files. Error logged. |
 | Generation hangs | 300s timeout → same fallback entry |
-| `claude` CLI missing | Same fallback entry |
+| `claude` CLI missing or fails | Falls back to `codex exec` if Codex CLI installed; entry frontmatter records `model: codex-exec` |
+| Both `claude` and `codex` missing | Same fallback entry |
 | Terminal closed right after turn end | Writer is detached — it finishes, commits, and pushes anyway |
 | Machine shutdown before writer finishes | No entry; log shows `spawned writer` without a matching `ok wrote` |
 | Offline when pushing | Entry committed locally, push failure logged, next successful push carries the backlog |

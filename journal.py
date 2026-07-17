@@ -7,7 +7,8 @@ journal-recorder agent. Stdlib only.
 Subcommands:
   hook stop|compact   fast path: dedup + substance check, extract transcript,
                       spawn detached writer, exit immediately
-  write               background writer: claude -p (haiku) -> entry file,
+  write               background writer: claude -p (haiku, falls back to
+                      codex exec on Codex-only machines) -> entry file,
                       INDEX.md, git commit, dedup marker
   digest              roll last N days of entries into digests/YYYY-Wnn.md
   resolve-dir         print journal root (for the agent)
@@ -455,6 +456,50 @@ def run_claude(prompt):
         return ""
 
 
+def run_codex(prompt):
+    """Generate via `codex exec` on Codex-only machines. Codex has no
+    --system-prompt flag, so the system prompt is prepended; the final agent
+    message lands in --output-last-message (stdout carries event logs)."""
+    out = None
+    try:
+        fd, out = tempfile.mkstemp(prefix="journal-codex-", suffix=".md")
+        os.close(fd)
+        res = subprocess.run(
+            ["codex", "exec", "--skip-git-repo-check", "--sandbox", "read-only",
+             "--output-last-message", out, SYSTEM_PROMPT + "\n\n" + prompt],
+            capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECS,
+        )
+        if res.returncode != 0:
+            log_line(f"codex exec failed rc={res.returncode}: {res.stderr.strip()[:300]}")
+            return ""
+        with open(out) as f:
+            return f.read().strip()
+    except (subprocess.TimeoutExpired, OSError) as e:
+        log_line(f"codex exec error: {e}")
+        return ""
+    finally:
+        if out:
+            try:
+                os.unlink(out)
+            except OSError:
+                pass
+
+
+def run_llm(prompt):
+    """Try claude -p first; fall back to codex exec when claude is missing or
+    returns nothing. Returns (body, model_label) — model_label goes into the
+    entry frontmatter so entries record which CLI wrote them."""
+    if shutil.which("claude"):
+        body = run_claude(prompt)
+        if body:
+            return body, MODEL
+    if shutil.which("codex"):
+        body = run_codex(prompt)
+        if body:
+            return body, "codex-exec"
+    return "", MODEL
+
+
 # ── subcommands ──────────────────────────────────────────────────────────────
 
 def cmd_hook(source):
@@ -572,7 +617,7 @@ def cmd_write(args):
         pass
 
     now = datetime.datetime.now().astimezone()
-    body = run_claude(PROMPT_TEMPLATE.format(
+    body, model = run_llm(PROMPT_TEMPLATE.format(
         date=now.strftime("%Y-%m-%d %H:%M"), digest=digest))
     if not body:
         body = (
@@ -590,7 +635,7 @@ def cmd_write(args):
         "date": now.isoformat(timespec="seconds"),
         "session_id": args.session_id or "unknown",
         "source": args.source,
-        "model": MODEL,
+        "model": model,
         "tags": tags,
     }
     base = f"{now.strftime('%Y-%m-%d_%H-%M')}_{slugify(title)}"
@@ -648,7 +693,7 @@ def cmd_digest(days, project):
         "## Open Action Items, ## Themes. Output only the markdown.\n\n"
         f"ENTRIES:\n{combined}"
     )
-    body = run_claude(prompt)
+    body, _ = run_llm(prompt)
     if not body:
         print("digest generation failed (see .journal.log)")
         return 1
