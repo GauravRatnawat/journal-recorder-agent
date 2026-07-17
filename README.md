@@ -1,16 +1,17 @@
-# journal-recorder — Claude Code Agent
+# journal-recorder — auto-journal for Claude Code & Codex
 
-Automatically records your Claude Code sessions as rich, shareable markdown journal entries. Triggers at conversation end, milestones, and on every `/compact`.
+Automatically records your [Claude Code](https://claude.ai/code) and [Codex CLI](https://github.com/openai/codex) sessions as rich, shareable markdown journal entries. Triggers at conversation end, on every `/compact`, and after every Codex turn.
 
 Each entry includes: what was worked on, commands run, files touched, decisions made, problems solved, and action items — written so anyone with zero prior context can understand it.
 
-Entries are organized **per project**, indexed, git-tracked, and generated in the **background on Haiku** so your session never waits.
+Entries are organized **per project**, indexed, git-tracked, **auto-pushed to GitHub**, and generated in the **background on Haiku** so your session never waits.
 
 ```
-~/claude-journal/
+~/claude-journal/                         ← git repo, auto-pushed if remote set
 ├── my-repo/
 │   ├── INDEX.md                          ← auto-maintained index
-│   ├── 2026-07-17_14-30_auth-refactor.md
+│   ├── 2026-07-17_14-30_auth-refactor.md ← session journals
+│   ├── commits/                          ← per-commit journals (optional git hook)
 │   └── .last-written                     ← per-project dedup marker
 ├── other-project/
 ├── digests/2026-W29.md                   ← weekly digests
@@ -115,6 +116,7 @@ Trigger signals: "thanks", "done", "bye", "looks good", "ship it", "we're done"
 **Automatic** — the hooks fire on their own:
 - When Claude's turn ends after a substantive session (Stop hook)
 - On every `/compact` or auto-compaction (PostCompact hook)
+- After every Codex turn (notify hook — see [Codex support](#codex-support))
 
 **Manual (rich agent entry):**
 ```
@@ -196,7 +198,25 @@ That's it. After every journal entry (hook, agent, or digest), `journal.py` comm
 
 ## How deduplication works
 
-Each project folder has its own marker file `<journal-root>/<project>/.last-written`. Whichever trigger path fires first (Stop hook, PostCompact hook, or agent) writes the journal and stamps the marker; the others see it is fresher than 30 minutes and skip. Sessions in *different* projects never block each other.
+Each project folder has its own marker file `<journal-root>/<project>/.last-written`. Whichever trigger path fires first (Stop hook, PostCompact hook, Codex notify, or agent/skill) writes the journal and stamps the marker; the others see it is fresher than 30 minutes and skip. Sessions in *different* projects never block each other. Claude Code and Codex working on the same project share the marker — one entry, not two.
+
+---
+
+## Failure behavior
+
+Nothing fails silently, and no session content is ever lost:
+
+| Failure | Behavior |
+|---|---|
+| `claude -p` fails (token limit, rate limit, API error) | Fallback entry written with the raw session digest — messages, commands, files. Error logged. |
+| Generation hangs | 300s timeout → same fallback entry |
+| `claude` CLI missing | Same fallback entry |
+| Terminal closed right after turn end | Writer is detached — it finishes, commits, and pushes anyway |
+| Machine shutdown before writer finishes | No entry; log shows `spawned writer` without a matching `ok wrote` |
+| Offline when pushing | Entry committed locally, push failure logged, next successful push carries the backlog |
+| Malformed hook input / missing transcript | Clean skip, logged, never breaks your session |
+
+Every run — written, skipped, or failed — appends one line to `<journal-root>/.journal.log`.
 
 ---
 
