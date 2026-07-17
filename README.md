@@ -4,6 +4,8 @@ Automatically records your [Claude Code](https://claude.ai/code) and [Codex CLI]
 
 Each entry includes: what was worked on, commands run, files touched, decisions made, problems solved, and action items — written so anyone with zero prior context can understand it.
 
+**Built for the human, not the agent.** AI sessions vanish the moment they end — a week later you can't remember which flag fixed the build or why you chose that architecture. This journal is *your* memory: remember what you did, find that command from three projects ago, hand a teammate the full story. It is **not** agent memory — Claude and Codex have their own memory systems for carrying context between sessions; this exists so *you* can remember and find things.
+
 Entries are organized **per project**, indexed, git-tracked, **auto-pushed to GitHub**, and generated in the **background on Haiku** so your session never waits.
 
 ```
