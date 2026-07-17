@@ -282,7 +282,7 @@
 
   .install h3 { font-family: var(--serif); font-weight: 500; font-size: 20px; margin: 36px 0 4px; }
   .install h3:first-of-type { margin-top: 0; }
-  .install .note { font-size: 14px; color: var(--ink-dim); }
+  .note { font-size: 14px; color: var(--ink-dim); }
 
   /* tree — light pre variant */
   pre.tree { background: var(--card); color: var(--ink-dim); border: 1px solid var(--rule); }
@@ -313,6 +313,7 @@
     <nav>
       <a href="#how">how</a>
       <a href="#features">features</a>
+      <a href="#obsidian">obsidian</a>
       <a href="#install">install</a>
       <a href="https://github.com/GauravRatnawat/journal-recorder-agent">github</a>
     </nav>
@@ -394,7 +395,7 @@
       </div>
       <div class="row">
         <h3>Frontmatter + weekly digests</h3>
-        <p>YAML frontmatter on every entry — Obsidian-friendly. <code>journal.py digest --days 7</code> rolls the week into one page.</p>
+        <p>YAML frontmatter on every entry — <a href="#obsidian">Obsidian-ready</a>. <code>journal.py digest --days 7</code> rolls the week into one page.</p>
       </div>
     </div>
   </div>
@@ -444,6 +445,33 @@ model: haiku · tags: [typescript, auth, debugging]
 ├── <span class="d">other-project/</span>
 ├── <span class="d">digests/</span>2026-W29.md
 └── .journal.log                 <span class="hl">← every run, one line</span></pre>
+  </div>
+</section>
+
+<section id="obsidian">
+  <div class="wrap">
+    <div class="kicker">the vault</div>
+    <h2>Already an Obsidian vault.</h2>
+    <div class="ledger">
+      <div class="row">
+        <h3>Nested tag tree</h3>
+        <p>Every entry is tagged <code>project/&lt;repo&gt;</code> and <code>source/&lt;stop|codex|compact|agent&gt;</code> plus content tags — the tag pane becomes a filterable tree.</p>
+      </div>
+      <div class="row">
+        <h3>Wikilinks + graph view</h3>
+        <p>Each entry links to its project's <code>INDEX</code> — in graph view, projects appear as hubs with their sessions orbiting around them.</p>
+      </div>
+      <div class="row">
+        <h3>HOME.md dashboard</h3>
+        <p>Auto-created once, never overwritten. Live tables of recent entries, open action items across all projects, entries per project — powered by the community <strong>Dataview</strong> plugin; everything else works without it.</p>
+      </div>
+      <div class="row">
+        <h3>Journal on your phone</h3>
+        <p>Obsidian mobile + the <strong>Obsidian Git</strong> plugin, cloned from your private journal repo — every entry pushed from your machine appears on your phone.</p>
+      </div>
+    </div>
+    <pre style="margin-top:28px"><span class="k">open</span> "obsidian://open?path=$(python3 ~/.claude/hooks/journal.py resolve-dir)"</pre>
+    <p class="note">Or manually: <strong>Open folder as vault</strong> → your journal root (default <code>~/claude-journal</code> — the root, not a project subfolder). <code>HOME.md</code> is the dashboard.</p>
   </div>
 </section>
 
