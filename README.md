@@ -105,7 +105,7 @@ Trigger signals: "thanks", "done", "bye", "looks good", "ship it", "we're done"
 - **Per-project folders** — each repo gets its own subfolder and its own 30-minute dedup marker, so parallel work on two projects journals both.
 - **YAML frontmatter** — `title`, `project`, `date`, `session_id`, `source`, `model`, `tags` on every entry. Obsidian-friendly, machine-readable.
 - **INDEX.md per project** — regenerated on every write from entry frontmatter.
-- **Git-tracked** — the journal root is auto-initialized as a git repo; every entry is committed. Push it wherever you like.
+- **Git-tracked + auto-pushed** — the journal root is auto-initialized as a git repo; every entry is committed, and if a remote is configured it is pushed automatically. See [Sync to GitHub](#sync-to-github).
 - **Never silent** — every run (written, skipped, failed) appends a line to `<journal-root>/.journal.log`. If `claude -p` fails, a fallback entry with the raw session digest is written instead of losing the session.
 
 ---
@@ -146,6 +146,21 @@ echo "~/Documents/my-journal" > ~/.claude/.journal-folder
 ```
 
 All paths (hooks, agent, digest) read from this file. Default if unset: `~/claude-journal/`.
+
+---
+
+## Sync to GitHub
+
+One-time setup — create a private repo and point the journal root at it:
+
+```bash
+cd "$(python3 ~/.claude/hooks/journal.py resolve-dir)"
+gh repo create claude-journal --private --source . --push
+```
+
+(Or manually: create a private repo on GitHub, then `git remote add origin git@github.com:<you>/claude-journal.git && git push -u origin HEAD`.)
+
+That's it. After every journal entry (hook, agent, or digest), `journal.py` commits and pushes to the first configured remote in the background. Push failures (offline, auth) are logged to `.journal.log` and never block the entry — the next successful push carries everything.
 
 ---
 

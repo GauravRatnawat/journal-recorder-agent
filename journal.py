@@ -281,7 +281,7 @@ def regenerate_index(project_dir):
 def git_commit(root, message):
     def run(*cmd):
         return subprocess.run(
-            ["git", "-C", root, *cmd], capture_output=True, text=True
+            ["git", "-C", root, *cmd], capture_output=True, text=True, timeout=60
         )
     try:
         if not os.path.isdir(os.path.join(root, ".git")):
@@ -291,8 +291,23 @@ def git_commit(root, message):
         out = (res.stdout or "") + (res.stderr or "")
         if res.returncode != 0 and "nothing to commit" not in out:
             log_line(f"git commit failed: {out.strip()[:200]}")
-    except OSError as e:
+            return
+        git_push(root, run)
+    except (OSError, subprocess.TimeoutExpired) as e:
         log_line(f"git unavailable: {e}")
+
+
+def git_push(root, run):
+    """Push to the first configured remote, if any. Failures only logged."""
+    try:
+        remote = run("remote").stdout.split()
+        if not remote:
+            return
+        res = run("push", remote[0], "HEAD", "--quiet")
+        if res.returncode != 0:
+            log_line(f"git push failed: {(res.stderr or res.stdout).strip()[:200]}")
+    except (OSError, subprocess.TimeoutExpired) as e:
+        log_line(f"git push error: {e}")
 
 
 # ── generation ───────────────────────────────────────────────────────────────
