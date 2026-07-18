@@ -707,6 +707,114 @@ def cmd_digest(days, project):
     return 0
 
 
+def site_root():
+    cfg = os.path.expanduser("~/.claude/.journal-site")
+    try:
+        with open(cfg) as f:
+            raw = f.read().strip()
+        if raw:
+            return os.path.expanduser(raw)
+    except OSError:
+        pass
+    return None
+
+
+def strip_entry_body(path):
+    """Entry body without our frontmatter and the Obsidian project footer."""
+    with open(path, errors="replace") as f:
+        text = f.read()
+    text = re.sub(r"\A---\n.*?\n---\n\s*", "", text, flags=re.S)
+    text = re.sub(r"\n---\n\*\*Project:\*\* \[\[.*?\]\]\s*\Z", "\n", text, flags=re.S)
+    return text.strip() + "\n"
+
+
+def extract_excerpt(body):
+    m = re.search(r"^##\s*TL;?DR\s*$(.*?)(?=^##\s|\Z)", body, re.M | re.S)
+    text = (m.group(1) if m else body).strip()
+    for para in text.split("\n\n"):
+        para = " ".join(para.split())
+        if para and not para.startswith("#"):
+            return para[:200].replace('"', "'")
+    return ""
+
+
+def latest_entry(root, project=None):
+    candidates = []
+    dirs = [os.path.join(root, project)] if project else [
+        os.path.join(root, d) for d in os.listdir(root)
+        if os.path.isdir(os.path.join(root, d))
+        and d not in (".git", "digests") and not d.startswith(".")
+    ]
+    for pdir in dirs:
+        try:
+            names = os.listdir(pdir)
+        except OSError:
+            continue
+        for name in names:
+            if name.endswith(".md") and name not in ("INDEX.md", "HOME.md"):
+                p = os.path.join(pdir, name)
+                candidates.append((os.path.getmtime(p), p))
+    return max(candidates)[1] if candidates else None
+
+
+def cmd_publish(entry, project, site):
+    site = site or site_root()
+    if not site or not os.path.isdir(os.path.join(site, "journal")):
+        print("no site configured — echo '<path-to-site-repo>' > ~/.claude/.journal-site")
+        return 1
+    root = journal_root()
+    path = entry or latest_entry(root, project or None)
+    if not path or not os.path.isfile(path):
+        print("no entry found to publish")
+        return 1
+
+    meta = parse_frontmatter(path)
+    body = strip_entry_body(path)
+    title = meta.get("title") or extract_title(body)
+    date = str(meta.get("date", ""))[:10] or datetime.date.today().isoformat()
+    tags = [t for t in meta.get("tags", []) if t and "/" not in t]
+    excerpt = extract_excerpt(body)
+
+    out_name = f"{date}-{slugify(title)}.md"
+    out_path = os.path.join(site, "journal", out_name)
+    with open(out_path, "w") as f:
+        f.write(f"---\ntitle: {title}\ndate: {date}\n"
+                f"tags: {', '.join(tags)}\nexcerpt: {excerpt}\n---\n\n{body}")
+
+    # regenerate index.js — filenames sort newest-first by date prefix
+    posts = sorted(
+        (n for n in os.listdir(os.path.join(site, "journal"))
+         if n.endswith(".md")), reverse=True)
+    with open(os.path.join(site, "journal", "index.js"), "w") as f:
+        f.write("window.JOURNAL_FILES = [\n")
+        f.write(",\n".join(f'  "journal/{n}"' for n in posts))
+        f.write("\n];\n")
+
+    def run(*cmd):
+        return subprocess.run(["git", "-C", site, *cmd],
+                              capture_output=True, text=True, timeout=120)
+    try:
+        run("add", "journal")
+        res = run("commit", "-m", f"journal: publish {title}")
+        if res.returncode == 0:
+            push = run("push")
+            if push.returncode != 0:
+                print(f"committed but push failed: {(push.stderr or '').strip()[:200]}")
+                return 1
+        else:
+            out = (res.stdout or "") + (res.stderr or "")
+            if "nothing to commit" not in out:
+                print(f"git commit failed: {out.strip()[:200]}")
+                return 1
+    except (OSError, subprocess.TimeoutExpired) as e:
+        print(f"git error: {e}")
+        return 1
+
+    print(f"published: {out_path}")
+    print(f"live soon: https://gauravratnawat.com/journal/ (entry: {out_name})")
+    return 0
+
+
 def cmd_check():
     root = journal_root()
     project = project_slug(os.getcwd())
@@ -747,6 +855,11 @@ def main():
     p_digest.add_argument("--days", type=int, default=7)
     p_digest.add_argument("--project", default="")
 
+    p_pub = sub.add_parser("publish")
+    p_pub.add_argument("entry", nargs="?", default="")
+    p_pub.add_argument("--project", default="")
+    p_pub.add_argument("--site", default="")
+
     sub.add_parser("resolve-dir")
     sub.add_parser("check")
     sub.add_parser("finalize")
@@ -763,6 +876,8 @@ def main():
     if args.cmd == "resolve-dir":
         print(journal_root())
         return 0
+    if args.cmd == "publish":
+        return cmd_publish(args.entry or None, args.project or None, args.site or None)
     if args.cmd == "check":
         return cmd_check()
     if args.cmd == "finalize":

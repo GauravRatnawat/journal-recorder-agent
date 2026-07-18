@@ -148,6 +148,17 @@ Writes `<journal-root>/digests/YYYY-Wnn.md`. To automate, add a cron line:
 0 18 * * FRI python3 $HOME/.claude/hooks/journal.py digest --days 7
 ```
 
+**Publish an entry to your website (one command):**
+```bash
+# one-time: point at your site repo (needs a journal/ folder with index.js)
+echo "~/Dev/my-site" > ~/.claude/.journal-site
+
+python3 ~/.claude/hooks/journal.py publish                    # latest entry, any project
+python3 ~/.claude/hooks/journal.py publish --project my-repo  # latest entry of one project
+python3 ~/.claude/hooks/journal.py publish path/to/entry.md   # specific entry
+```
+Converts the entry to your site's post format (frontmatter: title, date, tags, excerpt from the TL;DR), drops internal tags and Obsidian footer, regenerates the site's `journal/index.js`, commits, and pushes. Nothing publishes automatically — you pick what goes public.
+
 **Other commands:**
 ```bash
 python3 ~/.claude/hooks/journal.py resolve-dir   # print journal root
