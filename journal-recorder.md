@@ -47,6 +47,7 @@ title: [Short descriptive title]
 project: [project folder name]
 date: [ISO timestamp, e.g. 2026-07-17T14:30:00+02:00]
 source: agent
+agent: claude-code
 tags: [tag1, tag2, tag3]
 ---
 

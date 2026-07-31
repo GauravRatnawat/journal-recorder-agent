@@ -28,6 +28,7 @@ title: [Short descriptive title]
 project: [project folder name]
 date: [ISO timestamp]
 source: agent
+agent: codex
 tags: [tag1, tag2, tag3]
 ---
 
