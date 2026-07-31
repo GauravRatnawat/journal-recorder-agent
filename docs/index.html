@@ -449,7 +449,7 @@
   <div class="wrap">
     <div class="kicker">specimen entry</div>
     <h2>Entries a stranger could pick up cold.</h2>
-    <p class="lede">Written for a reader with zero context. Exact paths, verbatim commands, the why behind each decision.</p>
+    <p class="lede">Written for a reader with zero context. Under 400 words, no file inventory, the why behind each decision.</p>
     <div class="paper-card">
       <div class="stamp">source: stop · auto</div>
       <div class="fm">---
@@ -457,17 +457,17 @@ title: Auth Refactor — Token Expiry Fix
 project: my-repo · date: 2026-07-17T14:30 · source: stop
 model: haiku · tags: [typescript, auth, debugging]
 ---</div>
-      <h3>Auth Refactor — Token Expiry Fix</h3>
-      <h4>TL;DR</h4>
-      <p>Fixed intermittent 401s caused by an off-by-one in token expiry. Middleware compared with <code>&lt;</code> instead of <code>&lt;=</code>; added boundary test.</p>
-      <h4>Commands &amp; Scripts Run</h4>
-      <p><code>npm test -- auth</code> · <code>git bisect start HEAD v2.3.0</code></p>
-      <h4>Files Created / Modified</h4>
-      <ul>
-        <li><code>src/middleware/auth.ts</code> — expiry boundary fix</li>
-        <li><code>test/auth.spec.ts</code> — added edge-case test</li>
-      </ul>
-      <h4>Action Items</h4>
+      <h3>Intermittent 401s were an off-by-one in token expiry</h3>
+      <p><strong>In one line:</strong> Auth middleware compared expiry with <code>&lt;</code> instead of <code>&lt;=</code>, so tokens died one second early.</p>
+      <h4>The story</h4>
+      <p>401s showed up under load and never in tests. Bisect point at the expiry refactor. Boundary was exclusive, so a token expiring exactly on the check tick read as dead.</p>
+      <h4>Why we chose what we chose</h4>
+      <p>Fixed the comparison rather than widening the window — a grace period would have hidden the real bug.</p>
+      <h4>Gotchas for whoever comes next</h4>
+      <p>Expiry bugs never reproduce in tests. Second-boundary case needs an explicit test; wall-clock timing will not hit it.</p>
+      <h4>Commands worth remembering</h4>
+      <p><code>git bisect start HEAD v2.3.0</code></p>
+      <h4>Left undone</h4>
       <ul><li>☐ Deploy to staging and watch 401 rate</li></ul>
       <div class="tags">
         <span class="tag">#typescript</span><span class="tag">#auth</span><span class="tag">#debugging</span>

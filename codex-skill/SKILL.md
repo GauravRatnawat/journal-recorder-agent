@@ -32,35 +32,39 @@ agent: codex
 tags: [tag1, tag2, tag3]
 ---
 
-# [Title]
+# [Specific title naming what actually happened]
 
-## TL;DR
-[2-4 sentences: what the session was about, what changed.]
+**In one line:** [one sentence a reader could repeat to someone else]
 
-## What Was Accomplished
-- [Concrete bullets — file names, decisions, fixes]
+## The story
+[1-3 paragraphs: what prompted this, what turned out to be true, where it landed. Lead with whatever was surprising.]
 
-## Commands & Scripts Run
-[Significant commands verbatim in fenced code blocks.]
+## Why we chose what we chose
+- [Decision] — [the reasoning or trade-off]
 
-## Files Created / Modified
-| File | Action | Purpose |
-|------|--------|---------|
+## Gotchas for whoever comes next
+- [Traps, surprises, things that cost time]
 
-## Key Decisions
-- **Decision**: [what] — **Why**: [reasoning]
+## Commands worth remembering
+[Fenced block. Only commands worth running again — repro, verification, one-liners that were hard to get right.]
 
-## Problems & Solutions
-- **Problem**: [x] — **Solution**: [y]
-
-## Action Items
-- [ ] [Next steps with enough context to pick up cold]
+## Left undone
+- [ ] [Open threads with enough context to pick up cold]
 
 ## Tags
 `#tag1` `#tag2` `#tag3`
 ```
 
-Write for a reader with zero prior context. Preserve exact file paths, commands, and error messages. Synthesize — do not transcribe.
+Write for a developer who wasn't there and has never seen this project. They should finish it understanding what changed and why, not holding an inventory of what moved.
+
+**Voice — caveman.** Short words, broken grammar, no fluff. Drop articles (a/an/the) where it still reads, drop filler (just, really, basically, simply) and hedging. Fragments fine. "Rename surface two stale-state bug" not "The rename surfaced two stale-state bugs". Technical terms stay exact — names, flags, error strings, numbers are never reworded. Code blocks verbatim. Terse, not vague: every fact survives, only the grammar goes.
+
+- Prose, not bullet soup. The story section is paragraphs.
+- No table of files created/modified. Git records that exactly and forever; a hand-copied table only drifts. Name a file when the reader needs it to follow the point.
+- Skip any section with nothing real to say. A missing section beats a padded one.
+- Under 400 words before the tag line.
+- Explain the reasoning, not the transcript. "We chose X because Y proved wrong" earns its place; "then I ran the tests" does not.
+- Keep real names, paths, and error messages — this journal is private. `journal.py publish` redacts before anything reaches a public site.
 
 ## Step 3 — Finalize
 

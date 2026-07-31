@@ -42,25 +42,98 @@ SYSTEM_PROMPT = (
     "permissions. Just output the markdown text."
 )
 
-PROMPT_TEMPLATE = """Analyze this session log and write a structured markdown journal entry. \
+PROMPT_TEMPLATE = """Analyze this session log and write a short markdown journal entry. \
 The log contains USER/ASSISTANT messages and TOOL[...] lines showing commands run and files edited. \
 Output ONLY the markdown, starting directly with the # title.
 
-Required sections:
-# <descriptive title>
-## TL;DR
-## What Was Accomplished
-## Commands & Scripts Run
-## Files Created / Modified
-## Key Decisions
-## Problems & Solutions
-## Action Items
+Write it for a developer who wasn't there and has never seen this project. They should \
+finish it understanding what changed and why, not holding an inventory of what moved.
+
+VOICE — caveman. Short words, broken grammar, no fluff. Drop articles (a/an/the) where \
+it still reads. Drop filler (just, really, basically, actually, simply) and hedging. \
+Fragments fine. "Rename surface two stale-state bug" not "The rename surfaced two \
+stale-state bugs". Technical terms stay exact — names, flags, error strings, numbers are \
+never reworded. Code blocks stay verbatim. Terse, not vague: every fact survives, only \
+the grammar goes.
+
+Hard rules:
+- Prose, not bullet soup. The story section is paragraphs.
+- No table of files created/modified. Git already records that, exactly and forever.
+- Name a file only when the reader genuinely needs it to follow the point.
+- Skip any section with nothing real to say. A missing section beats a padded one.
+- Aim for under 400 words before the tag line. Cut anything a reader would skim.
+- Explain the reasoning, not the transcript. "Chose X because Y proved wrong" is \
+worth keeping; "then I ran the tests" is not.
+
+Shape:
+
+# <specific title naming what actually happened, not "Session Journal">
+
+**In one line:** <one sentence a reader could repeat to someone else>
+
+## The story
+<1-3 paragraphs: what prompted this, what turned out true, where it landed. Lead with \
+whatever was surprising.>
+
+## Why we chose what we chose
+<Each decision plus the reasoning or trade-off behind it. Skip decisions that had no \
+alternative worth naming.>
+
+## Gotchas for whoever comes next
+<Traps, surprises, things that cost time. Most valuable section — this is what a reader \
+cannot get from the diff.>
+
+## Commands worth remembering
+<Fenced code block, commands verbatim. Only commands worth running again: repro steps, \
+verification, one-liners that were hard to get right. Not the full shell history, and \
+not routine edits or file listings.>
+
+## Left undone
+<Open threads with enough context to pick up cold. Omit if nothing open.>
+
+Example of the voice:
+
+# Route allowlist guarded paths that never existed
+
+**In one line:** Rename job turn up HTTP boundary exempting routes service never \
+register — fail-open. Fixed by booting real service and enumerating.
+
+## The story
+Start as plain rename. Rename surface two stale-state bug. Old `.egg-info` from earlier \
+build leave dead entry point still visible to `importlib.metadata`, so two plugins load \
+at once. Worse, credential middleware allowlist was written from reading source, not from \
+observed routes. Source say 7 routes. Real service register 9.
+
 ## Tags
+`#tag1` `#tag2` `#tag3`
 
 Date: {date}
 
 SESSION LOG:
 {digest}"""
+
+REDACT_PROMPT = """Rewrite this journal entry so it is safe to publish on a public \
+personal website. Output ONLY the rewritten markdown, same structure, same headings.
+
+Remove or generalize anything that identifies an employer, client, or internal system:
+- Company and product names -> a neutral description ("the wrapper service", "an \
+internal proxy")
+- Internal repo, package, service, host, and namespace names -> neutral descriptions
+- Internal URLs, hostnames, IPs, ticket IDs, employee names, email addresses
+- Internal file paths that carry a company or product name
+- Credentials, tokens, and keys of any kind
+
+Keep everything that makes the entry worth reading: the reasoning, the trade-offs, the \
+gotchas, the general technology names (Python, Docker, Kubernetes, pytest, git), and \
+the shape of any commands. If a command contains an internal name, replace just that \
+name with a placeholder rather than dropping the command.
+
+Keep the entry's clipped caveman voice exactly as written — you are removing identifying \
+detail, not rewriting the prose. Do not add a note about redaction. Do not shorten the \
+entry beyond what removal requires.
+
+ENTRY:
+{body}"""
 
 
 # ── paths & logging ──────────────────────────────────────────────────────────
@@ -729,7 +802,9 @@ def strip_entry_body(path):
 
 
 def extract_excerpt(body):
-    m = re.search(r"^##\s*TL;?DR\s*$(.*?)(?=^##\s|\Z)", body, re.M | re.S)
+    m = re.search(r"^\*\*In one line:\*\*\s*(.+?)(?=\n\s*\n|\n##|\Z)", body, re.M | re.S)
+    if not m:  # entries written before the narrative template led with TL;DR
+        m = re.search(r"^##\s*TL;?DR\s*$(.*?)(?=^##\s|\Z)", body, re.M | re.S)
     text = (m.group(1) if m else body).strip()
     for para in text.split("\n\n"):
         para = " ".join(para.split())
@@ -757,6 +832,68 @@ def latest_entry(root, project=None):
     return max(candidates)[1] if candidates else None
 
 
+REDACT_CONFIG = "~/.claude/.journal-redact"
+
+# Always-on. Credential shapes and personal identifiers that must never ship,
+# regardless of what the user's denylist says.
+BUILTIN_REDACTIONS = [
+    (re.compile(r"-----BEGIN [A-Z ]*PRIVATE KEY-----.*?-----END [A-Z ]*PRIVATE KEY-----",
+                re.S), "<private-key>"),
+    (re.compile(r"\b(?:ghp|gho|ghu|ghs|ghr|github_pat)_[A-Za-z0-9_]{20,}"), "<token>"),
+    (re.compile(r"\bsk-[A-Za-z0-9_-]{20,}"), "<token>"),
+    (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "<token>"),
+    (re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}"), "<token>"),
+    (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]{2,}"), "<email>"),
+]
+
+
+def redact_rules():
+    """Load the publish denylist. One rule per line:
+
+        internal-service-name => the internal service
+        acme-corp
+        re:JIRA-\\d+ => <ticket>
+
+    Bare patterns become `<redacted>`. A `re:` prefix makes the pattern a regex;
+    anything else is matched literally. Matching is case-insensitive.
+
+    Returns (rules, denylist_exists) — the caller warns when it does not, since
+    without one only the built-in credential patterns apply.
+    """
+    rules = list(BUILTIN_REDACTIONS)
+    try:
+        with open(os.path.expanduser(REDACT_CONFIG)) as f:
+            lines = f.read().splitlines()
+    except OSError:
+        return rules, False
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        pattern, _, replacement = line.partition("=>")
+        pattern, replacement = pattern.strip(), replacement.strip() or "<redacted>"
+        if not pattern:
+            continue
+        if pattern.startswith("re:"):
+            try:
+                rules.append((re.compile(pattern[3:].strip(), re.I), replacement))
+            except re.error as e:
+                log_line(f"redact: skipping bad regex {pattern!r}: {e}")
+        else:
+            rules.append((re.compile(re.escape(pattern), re.I), replacement))
+    return rules, True
+
+
+def redact(text, rules):
+    """Apply rules to text. Returns (text, [(pattern, replacement, count)])."""
+    hits = []
+    for rx, replacement in rules:
+        text, n = rx.subn(replacement, text)
+        if n:
+            hits.append((rx.pattern, replacement, n))
+    return text, hits
+
+
 def cmd_publish(entry, project, site):
     site = site or site_root()
     if not site or not os.path.isdir(os.path.join(site, "journal")):
@@ -770,9 +907,29 @@ def cmd_publish(entry, project, site):
 
     meta = parse_frontmatter(path)
     body = strip_entry_body(path)
-    title = meta.get("title") or extract_title(body)
     date = str(meta.get("date", ""))[:10] or datetime.date.today().isoformat()
-    tags = [t for t in meta.get("tags", []) if t and "/" not in t]
+
+    # Two-layer scrub. The LLM pass generalizes prose a pattern list cannot see
+    # ("we renamed the wrapper" vs a specific package name); the rule pass is the
+    # actual guarantee and runs last, so the LLM cannot reintroduce a banned term.
+    rules, has_denylist = redact_rules()
+    if not has_denylist:
+        print(f"warning: no denylist at {REDACT_CONFIG} — only built-in credential "
+              "patterns will be stripped. Add one line per name to keep private.")
+    generic, _ = run_llm(REDACT_PROMPT.format(body=body))
+    if generic:
+        body = generic
+    else:
+        log_line("publish: genericize pass failed; rule-based redaction only")
+        print("note: genericize pass failed — publishing with denylist redaction only")
+    body, hits = redact(body, rules)
+    for pattern, replacement, n in hits:
+        print(f"redacted {n}x  {pattern} -> {replacement}")
+
+    # Derived after redaction — the stored title and tags carry the same leaks.
+    title = extract_title(body)
+    tags = [t for t in meta.get("tags", [])
+            if t and "/" not in t and redact(t, rules)[0] == t]
     excerpt = extract_excerpt(body)
 
     out_name = f"{date}-{slugify(title)}.md"

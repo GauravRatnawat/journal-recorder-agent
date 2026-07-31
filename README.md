@@ -157,7 +157,34 @@ python3 ~/.claude/hooks/journal.py publish                    # latest entry, an
 python3 ~/.claude/hooks/journal.py publish --project my-repo  # latest entry of one project
 python3 ~/.claude/hooks/journal.py publish path/to/entry.md   # specific entry
 ```
-Converts the entry to your site's post format (frontmatter: title, date, tags, excerpt from the TL;DR), drops internal tags and Obsidian footer, regenerates the site's `journal/index.js`, commits, and pushes. Nothing publishes automatically — you pick what goes public.
+Converts the entry to your site's post format (frontmatter: title, date, tags, excerpt from the one-liner), drops internal tags and the Obsidian footer, regenerates the site's `journal/index.js`, commits, and pushes. Nothing publishes automatically — you pick what goes public.
+
+### Redaction on publish
+
+Journal entries keep real names — the journal is a private git repo, and specificity is what makes a reread useful. `publish` is where that gets scrubbed, in two layers:
+
+1. **Genericize pass** (LLM) — rewrites prose that a pattern list cannot see: an employer's product name in a sentence becomes "the wrapper service". Best-effort.
+2. **Rule pass** (deterministic) — runs *last*, so the LLM cannot reintroduce a banned term. This is the actual guarantee.
+
+Rules live in `~/.claude/.journal-redact`, one per line. Literal matches are case-insensitive; a `re:` prefix makes the pattern a regex; without `=>` the match becomes `<redacted>`:
+
+```
+# ~/.claude/.journal-redact
+acme-nemo-wrapper => the wrapper service
+acme-mcp-proxy    => an internal proxy
+AcmeCorp
+re:JIRA-\d+       => <ticket>
+re:\w+\.internal\.acme\.com => <internal-host>
+```
+
+Credential shapes and email addresses are stripped whether or not you have a rules file — private keys, `ghp_*`, `sk-*`, `AKIA*`, Slack `xox*` tokens. Title, tags and excerpt are all derived *after* redaction, so a name in the stored title cannot leak through frontmatter. Each run prints what it replaced:
+
+```
+redacted 3x  acme\-nemo\-wrapper -> the wrapper service
+redacted 1x  JIRA-\d+ -> <ticket>
+```
+
+With no rules file, publish warns and applies only the built-in credential patterns. A malformed regex is skipped and logged to `.journal.log` rather than aborting the publish.
 
 **Other commands:**
 ```bash
@@ -285,22 +312,38 @@ model: claude-haiku-4-5-20251001
 tags: [claude-code, hooks, automation]
 ---
 
-# PostCompact Hook Setup and Fix
+# PostCompact hook fired twice per session
 
-## TL;DR
-Configured Claude Code to auto-journal on compaction...
+**In one line:** Compaction journaling wrote duplicate entries because the hook had no
+dedup window — fixed with a per-project marker file.
 
-## What Was Accomplished
-- bullet list with file names
-## Commands & Scripts Run
-## Files Created / Modified
-## Key Decisions
-## Problems & Solutions
-## Action Items
+## The story
+Set up auto-journal on compaction. Long session compact twice, so two entries land
+minutes apart, near-identical. No marker meant every hook fire wrote...
+
+## Why we chose what we chose
+- **Marker file over a lock** — hook must exit fast, and a stale lock would silently
+  kill journaling for good.
+
+## Gotchas for whoever comes next
+- Stop and PostCompact both fire on a long session. Dedup is not optional.
+
+## Commands worth remembering
+\```bash
+python3 ~/.claude/hooks/journal.py check   # SKIP/PROCEED verdict, no side effects
+\```
+
+## Left undone
 - [ ] ...
+
 ## Tags
 `#claude-code` `#hooks` `#automation`
 ```
+
+Entries stay short on purpose — under 400 words, no file table (git already records
+that, exactly), reasoning over chronology. Voice is clipped and article-light so a
+reread costs seconds. Real names are kept: the journal is a private git repo, and
+[publish redacts](#redaction-on-publish) before anything reaches a public site.
 
 ---
 
