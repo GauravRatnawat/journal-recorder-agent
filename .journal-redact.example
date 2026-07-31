@@ -60,6 +60,16 @@ X-Acme-Tenant                 => X-Tenant
 # In-document numbering (ADR-3, FR-2.1, NFR-7) is generic — leave it alone.
 re:\bPROJ-\d+\b           => <ticket>
 
+# ── codenames that collide with public names ────────────────────────────────
+# A codename doubling as a real product needs a negative lookahead, or every
+# mention of the public thing gets mangled too. Here the codename `jakarta` is
+# redacted but Jakarta EE package imports survive intact.
+re:jakarta(?!\.(?:persistence|validation|inject|servlet|ws|json|cdi)\b)(?=[a-z0-9_/-]|\.\w) => internalproj
+re:jakarta(?![a-z0-9.])       => InternalProject
+
+# Point every codename at the SAME stand-in. Distinct stand-ins let a reader
+# match a published entry back to a codename by elimination.
+
 # ── bare org and vendor names, last so every composite above wins ────────────
 re:widgetco(?=[a-z0-9_/-]|\.\w)  => vendor
 re:widgetco(?![a-z0-9])          => VendorCo
