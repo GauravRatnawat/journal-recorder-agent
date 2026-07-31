@@ -1,0 +1,68 @@
+# Example publish denylist. Copy to ~/.claude/.journal-redact and edit.
+#
+#   cp .journal-redact.example ~/.claude/.journal-redact
+#
+# Applied by `journal.py publish` AFTER the LLM genericize pass, so a rule here
+# cannot be undone by the model. Private entries keep real names; only what gets
+# published to a public site passes through this file.
+#
+# Keep your real copy OUT of version control — a committed denylist publishes the
+# exact list of names it exists to hide.
+#
+#   literal => replacement      case-insensitive substring match
+#   literal                     becomes <redacted>
+#   re:pattern => replacement   Python regex, case-insensitive, \1 backrefs OK
+#
+# Credential shapes and email addresses are stripped whether or not this file
+# exists: private keys, ghp_*, sk-*, AKIA*, and Slack xox* tokens.
+
+# ── THREE CONVENTIONS THAT MATTER ───────────────────────────────────────────
+#
+# 1. ORDER. Rules run top to bottom, so a specific composite must precede the
+#    bare name inside it. With `acme` first, `acme-gateway` becomes
+#    `<redacted>-gateway` instead of matching its own rule.
+#
+# 2. COMPOSITES STAY SINGLE TOKENS. Repo, package and branch names appear inside
+#    paths — `feat/acme-gateway`, `packages/acme`. A multi-word replacement there
+#    yields `feat/an internal gateway`, which is broken. Map every composite to
+#    one hyphenated or snake token that is valid wherever the original was.
+#
+# 3. BARE NAMES GET TWO RULES:
+#
+#      re:TOKEN(?=[a-z0-9_/-]|\.\w)   token continues into an identifier
+#                                     (`AcmeClient`, `acme_config`, `com.acme.x`)
+#                                     -> one lowercase word, identifier survives
+#      re:TOKEN(?![a-z0-9])           token stands alone in prose
+#                                     -> the readable stand-in
+#
+#    `\b` is no help: it treats `_` as a word character, so `\bacme\b` misses
+#    `acme_config`. Use the lookaheads above. Neither rule takes a lookbehind —
+#    one would skip `myAcmeClient` and leak the name outright, and without it the
+#    worst case is a cosmetically odd word.
+#
+#    Stand-ins are article-free (`AcmeCorp`, not `the company`) so a preceding
+#    article in the original text does not double up into "the a company".
+
+# ── repos, packages and services ────────────────────────────────────────────
+acme-api-gateway          => internal-api-gateway
+acme_api_gateway          => internal_api_gateway
+acme-group                => example-org
+widgetco-connector        => a-vendor-connector
+
+# ── internal hosts, registries and namespaces ───────────────────────────────
+re:[\w.-]*\.dev\.acme[\w.]*   => internal-dev-host
+registry.acme.internal        => internal-registry
+acme.atlassian.net            => jira.example.com
+re:\bcom\.acme\.              => com.example.
+X-Acme-Tenant                 => X-Tenant
+
+# ── ticket keys ─────────────────────────────────────────────────────────────
+# In-document numbering (ADR-3, FR-2.1, NFR-7) is generic — leave it alone.
+re:\bPROJ-\d+\b           => <ticket>
+
+# ── bare org and vendor names, last so every composite above wins ────────────
+re:widgetco(?=[a-z0-9_/-]|\.\w)  => vendor
+re:widgetco(?![a-z0-9])          => VendorCo
+
+re:acme(?=[a-z0-9_/-]|\.\w)      => internal
+re:acme(?![a-z0-9])              => AcmeCorp

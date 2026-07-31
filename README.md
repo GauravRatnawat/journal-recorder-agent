@@ -166,16 +166,27 @@ Journal entries keep real names — the journal is a private git repo, and speci
 1. **Genericize pass** (LLM) — rewrites prose that a pattern list cannot see: an employer's product name in a sentence becomes "the wrapper service". Best-effort.
 2. **Rule pass** (deterministic) — runs *last*, so the LLM cannot reintroduce a banned term. This is the actual guarantee.
 
-Rules live in `~/.claude/.journal-redact`, one per line. Literal matches are case-insensitive; a `re:` prefix makes the pattern a regex; without `=>` the match becomes `<redacted>`:
+Rules live in `~/.claude/.journal-redact`, one per line. Start from the shipped example:
+
+```bash
+cp .journal-redact.example ~/.claude/.journal-redact
+```
+
+Literal matches are case-insensitive; a `re:` prefix makes the pattern a regex; without `=>` the match becomes `<redacted>`:
 
 ```
-# ~/.claude/.journal-redact
-acme-nemo-wrapper => the wrapper service
-acme-mcp-proxy    => an internal proxy
+acme-api-gateway  => internal-api-gateway
 AcmeCorp
-re:JIRA-\d+       => <ticket>
-re:\w+\.internal\.acme\.com => <internal-host>
+re:PROJ-\d+       => <ticket>
 ```
+
+Three conventions the example explains in full, all learned by running it over real entries:
+
+- **Order matters.** Rules run top to bottom, so a specific composite must precede the bare name inside it — otherwise `acme` fires first and leaves `<redacted>-gateway`.
+- **Composites stay single tokens.** Repo and branch names appear inside paths, so a multi-word replacement turns `feat/acme-gateway` into `feat/an internal gateway`. Map each to one hyphenated token.
+- **Bare names get two rules** — one for identifier context (`com.acme.x`, `AcmeClient`) mapping to a single lowercase word, one for prose. `\b` does not help: it counts `_` as a word character, so `\bacme\b` misses `acme_config`.
+
+Keep your real list out of version control — a committed denylist publishes the exact names it exists to hide. `.gitignore` here already blocks `.journal-redact`.
 
 Credential shapes and email addresses are stripped whether or not you have a rules file — private keys, `ghp_*`, `sk-*`, `AKIA*`, Slack `xox*` tokens. Title, tags and excerpt are all derived *after* redaction, so a name in the stored title cannot leak through frontmatter. Each run prints what it replaced:
 

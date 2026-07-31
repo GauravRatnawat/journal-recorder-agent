@@ -1,3 +1,5 @@
 __pycache__/
 *.pyc
 .DS_Store
+# a real denylist would publish the very names it hides
+.journal-redact
