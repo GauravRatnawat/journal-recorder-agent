@@ -60,8 +60,11 @@ Hard rules:
 - Prose, not bullet soup. The story section is paragraphs.
 - No table of files created/modified. Git already records that, exactly and forever.
 - Name a file only when the reader genuinely needs it to follow the point.
-- Skip any section with nothing real to say. A missing section beats a padded one.
+- Skip any section with nothing real to say. A missing section beats a padded one. \
+The one exception is `## Tags` — always end with it, since the tags feed search.
 - Aim for under 400 words before the tag line. Cut anything a reader would skim.
+- Never echo the metadata block below into the entry. The date is recorded separately; \
+a `Date:` line in the body is duplication.
 - Explain the reasoning, not the transcript. "Chose X because Y proved wrong" is \
 worth keeping; "then I ran the tests" is not.
 
@@ -106,10 +109,12 @@ observed routes. Source say 7 routes. Real service register 9.
 
 ## Tags
 `#tag1` `#tag2` `#tag3`
+<Required. 3-6 tags: technology, task type, key concepts.>
 
-Date: {date}
+--- METADATA (context only, never copy into the entry) ---
+Session date: {date}
 
-SESSION LOG:
+--- SESSION LOG ---
 {digest}"""
 
 REDACT_PROMPT = """Rewrite this journal entry so it is safe to publish on a public \
