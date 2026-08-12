@@ -76,13 +76,18 @@ else:
     print("  hooks already present in " + path)
 PY
 
-# 4. Codex (only if Codex CLI is set up)
+# 4. Shared skill — every agent that reads ~/.agents/skills gets it.
+# Not Codex-specific: the skill calls journal.py by absolute path, so it works
+# from Cursor, OpenCode, Gemini CLI and Copilot too, where no hook exists.
+mkdir -p "$HOME/.agents/skills/journal-recorder"
+fetch codex-skill/SKILL.md "$HOME/.agents/skills/journal-recorder/SKILL.md"
+echo "  skill installed to ~/.agents/skills/journal-recorder"
+
+# 5. Codex notify hook (only if Codex CLI is set up)
 CODEX_CONFIG="$HOME/.codex/config.toml"
 if [ -d "$HOME/.codex" ]; then
   fetch codex-notify.sh "$HOOKS_DIR/codex-notify.sh"
   chmod +x "$HOOKS_DIR/codex-notify.sh"
-  mkdir -p "$HOME/.agents/skills/journal-recorder"
-  fetch codex-skill/SKILL.md "$HOME/.agents/skills/journal-recorder/SKILL.md"
 
   NOTIFY_LINE="notify = [\"$HOOKS_DIR/codex-notify.sh\"]"
   touch "$CODEX_CONFIG"

@@ -3,9 +3,13 @@ name: journal-recorder
 description: Record a journal entry summarizing the current session. Use when the user asks to journal, save, or log the session, or at a natural stopping point after significant work.
 ---
 
-# Journal Recorder (Codex)
+# Journal Recorder
 
-Write a structured markdown journal entry for this session. Automatic journaling already happens via the Codex notify hook — use this skill only when the user explicitly asks for a journal entry, or when they want one now instead of waiting for the hook.
+Write a structured markdown journal entry for this session. Works from any coding agent — the engine is called by absolute path and needs nothing agent-specific.
+
+**Claude Code and Codex journal automatically** via Stop/compact hooks. There, use this skill only when the user explicitly asks for an entry, or wants one now instead of waiting for the hook.
+
+**Every other agent** (Cursor, OpenCode, Gemini CLI, Copilot, …) has no hook wired — this skill is the only way an entry gets written. Offer one at a natural stopping point after significant work.
 
 ## Step 1 — Idempotency check
 
@@ -28,7 +32,7 @@ title: [Short descriptive title]
 project: [project folder name]
 date: [ISO timestamp]
 source: agent
-agent: codex
+agent: [which agent you are: claude-code, codex, cursor, opencode, gemini-cli, copilot]
 tags: [tag1, tag2, tag3]
 ---
 
