@@ -35,6 +35,8 @@ MIN_SUBSTANTIVE_MSGS = 4
 SUBSTANTIVE_TEXT_CHARS = 50
 CLAUDE_TIMEOUT_SECS = 300
 FALLBACK_EXCERPT_CHARS = 15_000
+# Runs on the hook path — a wedged git must never stall the session.
+GIT_TIMEOUT_SECS = 5
 
 SYSTEM_PROMPT = (
     "You are a journal writer. Your only job is to produce clean markdown "
@@ -171,8 +173,36 @@ def slugify(text, max_len=60):
     return s[:max_len].rstrip("-") or "session"
 
 
+def repo_root_name(cwd):
+    """Repository directory name for cwd, or None outside a repo.
+
+    Uses the *common* git dir so every worktree of a repo answers with the repo
+    name. Conductor names each workspace after its branch, so basename-of-cwd
+    would file one repo's sessions under a new project per task."""
+    try:
+        res = subprocess.run(
+            ["git", "-C", cwd, "rev-parse", "--path-format=absolute",
+             "--git-common-dir"],
+            capture_output=True, text=True, timeout=GIT_TIMEOUT_SECS,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return None
+    if res.returncode != 0:
+        return None
+
+    common = res.stdout.strip()
+    if not common:
+        return None
+    # …/imtf-adrs/.git → imtf-adrs; a bare …/imtf-adrs.git → imtf-adrs
+    root = os.path.dirname(common) if os.path.basename(common) == ".git" else common
+    name = os.path.basename(root.rstrip("/"))
+    if name.endswith(".git"):
+        name = name[:-len(".git")]
+    return name or None
+
+
 def project_slug(cwd):
-    base = os.path.basename((cwd or "").rstrip("/"))
+    base = repo_root_name(cwd) or os.path.basename((cwd or "").rstrip("/"))
     return slugify(base, 40) if base else "misc"
 
 
@@ -509,9 +539,24 @@ def git_push(root, run):
         remote = run("remote").stdout.split()
         if not remote:
             return
-        res = run("push", remote[0], "HEAD", "--quiet")
+        branch = run("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "HEAD"
+        res = run("push", remote[0], branch, "--quiet")
+        if res.returncode == 0:
+            return
+        # A clone that fell behind (journals written elsewhere, or the site repo
+        # pushing first) rejects every later push. Merge once and retry, so a
+        # single divergence cannot silently wedge publishing for weeks.
+        merge = run("pull", "--no-rebase", "--no-edit", "--autostash", "--quiet",
+                    remote[0], branch)
+        if merge.returncode != 0:
+            run("merge", "--abort")
+            log_line(f"git push blocked, merge failed: "
+                     f"{(merge.stderr or merge.stdout).strip()[:200]}")
+            return
+        res = run("push", remote[0], branch, "--quiet")
         if res.returncode != 0:
-            log_line(f"git push failed: {(res.stderr or res.stdout).strip()[:200]}")
+            log_line(f"git push failed after merge: "
+                     f"{(res.stderr or res.stdout).strip()[:200]}")
     except (OSError, subprocess.TimeoutExpired) as e:
         log_line(f"git push error: {e}")
 

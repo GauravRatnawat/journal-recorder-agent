@@ -8,19 +8,16 @@ REPO_ROOT = Path(__file__).resolve().parent.parent
 
 
 class TestAgentTemplates(unittest.TestCase):
-    def test_templates_identify_the_creating_agent(self):
-        expected_agents = {
-            "journal-recorder.md": "claude-code",
-            "codex-skill/SKILL.md": "codex",
-        }
+    def test_single_agent_template_names_its_own_agent(self):
+        template = (REPO_ROOT / "journal-recorder.md").read_text()
+        self.assertIn("agent: claude-code", template)
 
-        missing = []
-        for relative_path, agent in expected_agents.items():
-            template = (REPO_ROOT / relative_path).read_text()
-            if f"agent: {agent}" not in template:
-                missing.append(relative_path)
+    def test_shared_skill_lets_the_running_agent_name_itself(self):
+        """The skill is installed for every agent, so it must not claim to be one."""
+        template = (REPO_ROOT / "codex-skill/SKILL.md").read_text()
 
-        self.assertEqual([], missing)
+        self.assertIn("agent: [which agent you are:", template)
+        self.assertNotIn("agent: codex\n", template)
 
 
 if __name__ == "__main__":
