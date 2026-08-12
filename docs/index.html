@@ -367,7 +367,7 @@
   <div class="wrap">
     <div class="entry-no">entry № 941 <span class="dim">— nobody wrote it. everybody can read it.</span></div>
     <h1>Your AI coding sessions,<br><em>journaled</em> while you sleep.</h1>
-    <p class="sub">Every <strong>Claude Code</strong> and <strong>Codex</strong> session becomes a rich markdown journal entry — commands run, files touched, decisions made. Sorted <strong>per project</strong>, indexed, committed, and <strong>pushed to your private GitHub</strong>. You never lift a finger.</p>
+    <p class="sub">Every <strong>Claude Code</strong> and <strong>Codex</strong> session becomes a short markdown journal entry — what changed, why, and the gotchas worth remembering. Sorted <strong>per project</strong>, indexed, committed, and <strong>pushed to your private GitHub</strong>. You never lift a finger.</p>
     <p class="purpose">For <em>your</em> memory, not the machine's — so next month you can remember what you did, and find it.</p>
     <div class="cta-row">
       <a class="btn primary" href="#install">Install — one command</a>
@@ -418,16 +418,20 @@
     <h2>Everything captured. Nothing lost.</h2>
     <div class="ledger">
       <div class="row">
-        <h3>Real commands, real files</h3>
-        <p>Tool calls feed the writer, so "Commands Run" and "Files Modified" sections are extracted, not hallucinated.</p>
+        <h3>Short enough to actually reread</h3>
+        <p>Under 400 words: the story, the decisions and why, the gotchas, and only the commands worth running again. No file inventory — git already records that exactly, and a hand-copied table just drifts.</p>
       </div>
       <div class="row">
-        <h3>Per-project folders</h3>
-        <p>Each repo gets its own subfolder, its own <code>INDEX.md</code>, its own 30-minute dedup marker. Parallel projects never block each other.</p>
+        <h3>Real commands, not hallucinated</h3>
+        <p>Tool calls feed the writer, so the commands in an entry are the ones that actually ran.</p>
       </div>
       <div class="row">
-        <h3>Claude Code + Codex</h3>
-        <p>One engine, both tools. Same project, same window → one entry, whichever finishes first. Codex rollouts parsed natively.</p>
+        <h3>Per-repo folders</h3>
+        <p>Each repo gets its own subfolder, its own <code>INDEX.md</code>, its own 30-minute dedup marker. Parallel projects never block each other. Worktrees fold in: run five Conductor workspaces off one repo and they all land in that repo's folder, not five folders named after branches.</p>
+      </div>
+      <div class="row">
+        <h3>Claude Code + Codex, and a skill for the rest</h3>
+        <p>One engine, both tools. Same project, same window → one entry, whichever finishes first. Codex rollouts parsed natively. Cursor, OpenCode, Gemini CLI and Copilot get the <code>journal-recorder</code> skill instead — no hook to fire there, so ask for an entry and you get the same format in the same folder.</p>
       </div>
       <div class="row">
         <h3>Auto-push to GitHub</h3>
@@ -440,6 +444,14 @@
       <div class="row">
         <h3>Frontmatter + weekly digests</h3>
         <p>YAML frontmatter on every entry — <a href="#obsidian">Obsidian-ready</a>. <code>journal.py digest --days 7</code> rolls the week into one page.</p>
+      </div>
+      <div class="row">
+        <h3>Publish one entry to your site</h3>
+        <p><code>journal.py publish</code> converts an entry to your site's post format, regenerates the post index, commits and pushes. Nothing goes public unless you run it.</p>
+      </div>
+      <div class="row">
+        <h3>Redaction that isn't a prompt</h3>
+        <p>Entries keep real names — that's what makes them worth rereading. Publishing scrubs them: a generalizing pass rewrites prose, then a deterministic rule pass from your denylist runs <em>last</em>, so the model can't reintroduce a name. Credentials and emails go either way.</p>
       </div>
     </div>
   </div>
@@ -507,7 +519,7 @@ model: haiku · tags: [typescript, auth, debugging]
       </div>
       <div class="row">
         <h3>HOME.md dashboard</h3>
-        <p>Auto-created once, never overwritten. Live tables of recent entries, open action items across all projects, entries per project — powered by the community <strong>Dataview</strong> plugin; everything else works without it.</p>
+        <p>Auto-created once, never overwritten. Live tables of recent entries, open tasks across all projects, entries per project — powered by the community <strong>Dataview</strong> plugin; everything else works without it.</p>
       </div>
       <div class="row">
         <h3>Journal on your phone</h3>
@@ -525,7 +537,7 @@ model: haiku · tags: [typescript, auth, debugging]
     <h2>One command.</h2>
 
     <pre><span class="k">curl</span> -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/install.sh | <span class="k">bash</span></pre>
-    <p class="note">Engine, both hooks, the agent, and the <code>settings.json</code> merge (existing hooks preserved). If Codex CLI is installed, the notify adapter and skill get wired too. Idempotent — safe to re-run. Prefer to see every step? <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install">Manual install in the README</a>.</p>
+    <p class="note">Engine, both hooks, the agent, and the <code>settings.json</code> merge (existing hooks preserved). The <code>journal-recorder</code> skill installs to <code>~/.agents/skills</code> for every agent that reads it. If Codex CLI is installed, its notify adapter gets wired too. Idempotent — safe to re-run. Prefer to see every step? <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install">Manual install in the README</a>.</p>
 
     <h3>GitHub sync (optional, one command)</h3>
     <pre><span class="k">cd</span> "$(python3 ~/.claude/hooks/journal.py resolve-dir)"
