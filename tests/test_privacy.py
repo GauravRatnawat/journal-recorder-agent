@@ -329,6 +329,19 @@ class PrivacyTests(unittest.TestCase):
         self.assertFalse(journal.git_push(str(root), run))
         self.assertEqual("", self.git(push_remote, "for-each-ref", "--format=%(refname)"))
 
+    def test_outgoing_author_identity_cannot_bypass_scan(self):
+        root = self.repo()
+        remote = self.root / "remote.git"
+        self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        baseline = self.git(remote, "rev-parse", "main")
+        self.git(root, "-c", "user.name=AcmeCorp", "commit", "--allow-empty", "-m", "safe")
+        def run(*args):
+            return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+        self.assertFalse(journal.git_push(str(root), run))
+        self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
+
 
 if __name__ == "__main__":
     unittest.main()
