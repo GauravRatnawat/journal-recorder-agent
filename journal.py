@@ -550,7 +550,8 @@ def git_commit(root, message, paths=None):
         res = run("add", "--", *paths)
         if res.returncode:
             return False
-        res = run("commit", "--only", "-m", message, "--", *paths)
+        res = run("-c", "user.name=Journal Recorder", "-c", "user.email=recorder@localhost",
+                  "commit", "--only", "-m", message, "--", *paths)
         out = (res.stdout or "") + (res.stderr or "")
         if res.returncode != 0 and "nothing to commit" not in out:
             log_line(f"git commit failed: {out.strip()[:200]}")
@@ -591,8 +592,6 @@ def git_push(root, run):
             kind = checked("cat-file", "-t", oid)
             if kind in ("blob", "commit"):
                 text = checked("cat-file", kind, oid)
-                if kind == "commit":
-                    text = text.partition("\n\n")[2]
                 if safe_text(text) != text:
                     raise ValueError("Unsafe outgoing content.")
         checked("push", "--no-follow-tags", "origin", f"{head}:refs/heads/{branch}")
