@@ -993,8 +993,9 @@ BUILTIN_REDACTIONS = [
     (re.compile(r"\bsk-[A-Za-z0-9_-]{20,}"), "<token>"),
     (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "<token>"),
     (re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}"), "<token>"),
+    (re.compile(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s/@]+@"), "<credential>@"),
     (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]{2,}"), "<email>"),
-    (re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*"), "<credential>"),
+    (re.compile(r"(?i)\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/-]+=*"), "<credential>"),
     (re.compile(r'''(?ix)\b(?:password|passwd|pwd|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|aws[_-]?secret[_-]?access[_-]?key|secret|token)["']?\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)'''), "<credential>"),
 ]
 
