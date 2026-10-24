@@ -555,7 +555,7 @@ def git_commit(root, message, paths=None):
         if res.returncode != 0 and "nothing to commit" not in out:
             log_line(f"git commit failed: {out.strip()[:200]}")
             return
-        git_push(root, run)
+        return git_push(root, run)
     except (OSError, subprocess.TimeoutExpired) as e:
         log_line(f"git unavailable: {e}")
 
@@ -810,7 +810,9 @@ def cmd_write(args):
 
     stamp_marker(root, args.project, args.session_id)
     regenerate_index(project_dir)
-    git_commit(root, f"journal: {args.project} — {title}")
+    paths = [os.path.relpath(entry_path, root),
+             os.path.join(args.project, "INDEX.md"), "HOME.md"]
+    git_commit(root, f"journal: {args.project}: {title}", paths)
     log_line(f"ok wrote {entry_path} source={args.source}")
     return 0
 
