@@ -514,7 +514,7 @@ def ensure_home(root):
 
 # ── git ──────────────────────────────────────────────────────────────────────
 
-def git_commit(root, message):
+def git_commit(root, message, paths=None):
     def run(*cmd):
         return subprocess.run(
             ["git", "-C", root, *cmd], capture_output=True, text=True, timeout=60
@@ -522,8 +522,17 @@ def git_commit(root, message):
     try:
         if not os.path.isdir(os.path.join(root, ".git")):
             run("init")
-        run("add", "-A")
-        res = run("commit", "-m", message)
+        if not paths:
+            log_line("sync blocked: owned paths missing")
+            return False
+        staged = run("diff", "--cached", "--name-only", "-z")
+        if staged.returncode or staged.stdout:
+            log_line("sync blocked: staged data exists")
+            return False
+        res = run("add", "--", *paths)
+        if res.returncode:
+            return False
+        res = run("commit", "--only", "-m", message, "--", *paths)
         out = (res.stdout or "") + (res.stderr or "")
         if res.returncode != 0 and "nothing to commit" not in out:
             log_line(f"git commit failed: {out.strip()[:200]}")
