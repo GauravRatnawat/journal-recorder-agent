@@ -759,6 +759,18 @@ def cmd_hook_codex(payload_arg):
     return 0
 
 
+def cmd_record():
+    """Any agent sends summary JSON on stdin. Core owns saved files."""
+    data = json.load(sys.stdin)
+    if not isinstance(data, dict) or not isinstance(data.get("summary"), str):
+        raise ValueError("Summary JSON needed.")
+    agent = slugify(str(data.get("agent", "agent"))) or "agent"
+    args = argparse.Namespace(project=project_slug(data.get("cwd") or os.getcwd()),
+                              session_id=str(data.get("session_id", "")),
+                              source=agent, summary=data["summary"], agent=agent)
+    return cmd_write(args)
+
+
 def cmd_write(args):
     args = argparse.Namespace(**{
         **vars(args),
@@ -770,20 +782,23 @@ def cmd_write(args):
     project_dir = os.path.join(root, args.project)
     os.makedirs(project_dir, exist_ok=True)
 
-    try:
-        with open(args.digest_file) as f:
-            digest = f.read()
-    except OSError as e:
-        log_line(f"writer failed: digest file unreadable: {e}")
-        return 1
-    try:
-        os.unlink(args.digest_file)
-    except OSError:
-        pass
-
     now = datetime.datetime.now().astimezone()
-    body, model = run_llm(PROMPT_TEMPLATE.format(
-        date=now.strftime("%Y-%m-%d %H:%M"), digest=digest))
+    if hasattr(args, "summary"):
+        body, model = safe_text(args.summary), "agent-summary"
+    else:
+        try:
+            with open(args.digest_file) as f:
+                digest = f.read()
+        except OSError:
+            log_line("writer failed: digest unreadable")
+            return 1
+        finally:
+            try:
+                os.unlink(args.digest_file)
+            except OSError:
+                pass
+        body, model = run_llm(PROMPT_TEMPLATE.format(
+            date=now.strftime("%Y-%m-%d %H:%M"), digest=digest))
     if not body or not body.strip():
         log_line("writer skip: model failed")
         return 1
@@ -798,6 +813,7 @@ def cmd_write(args):
         "date": now.isoformat(timespec="seconds"),
         "session_id": args.session_id or "unknown",
         "source": args.source,
+        "agent": safe_text(getattr(args, "agent", args.source)),
         "model": model,
         "tags": tags,
     }
@@ -1102,6 +1118,7 @@ def main():
     p_pub.add_argument("--project", default="")
     p_pub.add_argument("--site", default="")
 
+    sub.add_parser("record")
     sub.add_parser("resolve-dir")
     sub.add_parser("check")
     sub.add_parser("finalize")
@@ -1111,6 +1128,8 @@ def main():
         if args.source == "codex":
             return cmd_hook_codex(args.payload)
         return cmd_hook(args.source)
+    if args.cmd == "record":
+        return cmd_record()
     if args.cmd == "write":
         return cmd_write(args)
     if args.cmd == "digest":
