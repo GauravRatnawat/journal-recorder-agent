@@ -759,6 +759,35 @@ def cmd_hook_codex(payload_arg):
     return 0
 
 
+def cmd_hook_text(source):
+    """Native hooks supply final text. No transcript guess needed."""
+    data = json.load(sys.stdin)
+    if not isinstance(data, dict):
+        return 0
+    if source == "cursor":
+        if data.get("hook_event_name") != "afterAgentResponse":
+            return 0
+        roots = data.get("workspace_roots")
+        if not isinstance(roots, list) or len(roots) != 1:
+            return 0
+        cwd, session = roots[0], data.get("conversation_id")
+        text = data.get("text")
+    else:
+        if data.get("hook_event_name") != "AfterAgent" or data.get("stop_hook_active"):
+            return 0
+        cwd, session = data.get("cwd"), data.get("session_id")
+        text = data.get("prompt_response")
+        if isinstance(text, str) and isinstance(data.get("prompt"), str):
+            text = data["prompt"] + "\n\n" + text
+    if not isinstance(cwd, str) or not isinstance(session, str) or not isinstance(text, str) or not text.strip():
+        return 0
+    root = journal_root()
+    project = project_slug(cwd)
+    if not is_duplicate(root, project, int(time.time())):
+        spawn_writer(root, project, session, source, safe_text(text))
+    return 0
+
+
 def cmd_record():
     """Any agent sends summary JSON on stdin. Core owns saved files."""
     data = json.load(sys.stdin)
@@ -1094,7 +1123,7 @@ def main():
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_hook = sub.add_parser("hook")
-    p_hook.add_argument("source", choices=["stop", "compact", "codex"])
+    p_hook.add_argument("source", choices=["stop", "compact", "codex", "cursor", "gemini"])
     p_hook.add_argument("payload", nargs="?", default="")
 
     p_write = sub.add_parser("write")
@@ -1119,6 +1148,8 @@ def main():
 
     args = parser.parse_args()
     if args.cmd == "hook":
+        if args.source in ("cursor", "gemini"):
+            return cmd_hook_text(args.source)
         if args.source == "codex":
             return cmd_hook_codex(args.payload)
         return cmd_hook(args.source)
