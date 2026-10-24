@@ -229,6 +229,21 @@ class PrivacyTests(unittest.TestCase):
         self.assertNotIn("fake_digest_42", output.read_text())
         self.assertEqual([str(output.relative_to(notes))], commit.call_args.args[2])
 
+    def test_codex_lookup_requires_exact_thread_and_cwd(self):
+        sessions = self.root / "sessions"
+        folder = sessions / "2026" / "10" / "24"
+        folder.mkdir(parents=True)
+        for name, thread, cwd in (("one", "wanted", "/project"),
+                                  ("two", "other", "/project"),
+                                  ("three", "wanted", "/elsewhere")):
+            (folder / f"rollout-{name}.jsonl").write_text(json.dumps({
+                "type": "session_meta", "payload": {"id": thread, "cwd": cwd}}) + "\n")
+        with mock.patch.object(journal, "CODEX_SESSIONS", str(sessions)):
+            path, _ = journal.find_codex_rollout("/project", "wanted")
+            self.assertEqual("rollout-one.jsonl", Path(path).name)
+            self.assertEqual((None, {}), journal.find_codex_rollout("/missing", "wanted"))
+            self.assertEqual((None, {}), journal.find_codex_rollout("/project", "missing"))
+
 
 if __name__ == "__main__":
     unittest.main()
