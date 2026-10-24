@@ -662,7 +662,7 @@ def run_llm(prompt):
         body = run_claude(prompt)
         if body:
             return safe_text(body), MODEL
-    if shutil.which("codex"):
+    if os.environ.get("JOURNAL_ALLOW_CODEX") == "1" and shutil.which("codex"):
         body = run_codex(prompt)
         if body:
             return safe_text(body), "codex-exec"
