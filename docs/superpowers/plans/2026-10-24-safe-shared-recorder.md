@@ -1,0 +1,28 @@
+# Safe Shared Recorder Plan
+
+Goal: one safe summary path for agent hooks and manual use. APM optional install path. Real journals stay private.
+
+## Rules
+
+Keep Python stdlib. Keep old CLI entry points where safe. Leave live hooks and settings alone. Use fake data and temp Git repos in tests. No raw fallback. No whole repo staging. No claim that pattern scan catches all secrets.
+
+## Tasks
+
+1. Shared filter. Builtin secret shapes plus local denylist. Bad rules block. Scrub before temp file, model call, and saved output. Scan final text for residual matches. Tests first, one behavior per cycle.
+2. Safe save. Failed model means skip entry. Metadata and paths use same filter. Manual agents submit summary to core. Old finalize blocks direct sync. Weekly digest and public publish use same filter.
+3. Git gate. Exact owned files only. Reject unrelated staged changes and symlinks. Commit only safe text. Check all outgoing commits, messages, paths and changed blobs before push. No auto merge. Use explicit origin and current branch. Missing remote baseline means block existing history upload.
+4. Session adapters. Bind Codex to exact thread and cwd. Keep Claude hooks. Add verified Gemini and Cursor payload support. Copilot support only where full payload contract verified. Manual stdin summary works from any agent.
+5. Package. Direct local installer copies whole core. Fix root TOML notify insertion. Optional APM skill and target hook files. Avoid universal event alias claiming universal transcript schema.
+6. Docs and checks. README support matrix, privacy limits, model providers, migration and APM steps. Run fake end to end checks. Fresh security and Python review before release.
+
+## Test order
+
+Each cycle: one failing behavior test, RED commit, minimum fix, suite pass, GREEN commit. Continue cycles without review pause under user instruction to finish without more questions. Never push raw fixtures or live data. Use generic maintainer author for public commits.
+
+## Review focus
+
+Replacement reintroduces secret. Invalid rules or unreadable config. Unrelated staged data and older outgoing secrets. Session from wrong cwd or thread. Hook payload lacks useful text. Installer runs twice with TOML tables. Model failure cannot write transcript.
+
+## Progress
+
+Baseline: 18 tests pass. Installed recorder matches repo. Privacy audit found save and push gaps, no prior leak proved. Branch: feat/safe-shared-recorder.
