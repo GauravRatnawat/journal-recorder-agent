@@ -611,11 +611,11 @@ def run_claude(prompt):
             capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECS,
         )
         if res.returncode != 0:
-            log_line(f"claude -p failed rc={res.returncode}: {res.stderr.strip()[:300]}")
+            log_line(f"claude failed rc={res.returncode}")
             return ""
         return res.stdout.strip()
     except (subprocess.TimeoutExpired, OSError) as e:
-        log_line(f"claude -p error: {e}")
+        log_line("claude failed: launch or timeout")
         return ""
 
 
@@ -633,12 +633,12 @@ def run_codex(prompt):
             capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECS,
         )
         if res.returncode != 0:
-            log_line(f"codex exec failed rc={res.returncode}: {res.stderr.strip()[:300]}")
+            log_line(f"codex failed rc={res.returncode}")
             return ""
         with open(out) as f:
             return f.read().strip()
     except (subprocess.TimeoutExpired, OSError) as e:
-        log_line(f"codex exec error: {e}")
+        log_line("codex failed: launch or timeout")
         return ""
     finally:
         if out:
