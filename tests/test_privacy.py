@@ -126,6 +126,25 @@ class PrivacyTests(unittest.TestCase):
         self.assertEqual("", self.git(root, "diff", "--cached", "--name-only"))
         push.assert_not_called()
 
+    def test_push_scans_old_outgoing_content_even_when_deleted(self):
+        root = self.repo()
+        remote = self.root / "remote.git"
+        self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        baseline = self.git(remote, "rev-parse", "main")
+        (root / "entry.md").write_text("password=fake_history_42")
+        self.git(root, "add", "entry.md")
+        self.git(root, "commit", "-m", "unsafe")
+        (root / "entry.md").unlink()
+        self.git(root, "add", "-u")
+        self.git(root, "commit", "-m", "clean head")
+        def run(*args):
+            return subprocess.run(["git", "-C", str(root), *args],
+                                  capture_output=True, text=True)
+        self.assertFalse(journal.git_push(str(root), run))
+        self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
+
 
 if __name__ == "__main__":
     unittest.main()
