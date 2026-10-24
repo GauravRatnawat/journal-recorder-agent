@@ -1072,6 +1072,12 @@ def cmd_publish(entry, project, site):
     meta = parse_frontmatter(path)
     body = strip_entry_body(path)
     date = str(meta.get("date", ""))[:10] or datetime.date.today().isoformat()
+    try:
+        if datetime.date.fromisoformat(date).isoformat() != date:
+            raise ValueError("Bad date.")
+    except ValueError:
+        print("Publish blocked: date invalid.")
+        return 1
 
     # Two-layer scrub. The LLM pass generalizes prose a pattern list cannot see
     # ("we renamed the wrapper" vs a specific package name); the rule pass is the
