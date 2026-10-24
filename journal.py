@@ -939,8 +939,8 @@ def redact_rules():
         if pattern.startswith("re:"):
             try:
                 rules.append((re.compile(pattern[3:].strip(), re.I), replacement))
-            except re.error as e:
-                log_line(f"redact: skipping bad regex {pattern!r}: {e}")
+            except re.error:
+                raise ValueError("Privacy rule invalid.") from None
         else:
             rules.append((re.compile(re.escape(pattern), re.I), replacement))
     return rules, True
