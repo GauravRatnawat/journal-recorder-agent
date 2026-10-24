@@ -116,6 +116,16 @@ class PrivacyTests(unittest.TestCase):
         self.assertEqual(before, self.git(root, "rev-parse", "HEAD"))
         self.assertEqual("other.txt", self.git(root, "diff", "--cached", "--name-only"))
 
+    def test_commit_rejects_unsafe_owned_text(self):
+        root = self.repo()
+        (root / "entry.md").write_text("password=fake_commit_42")
+        before = self.git(root, "rev-parse", "HEAD")
+        with mock.patch.object(journal, "git_push") as push:
+            self.assertFalse(journal.git_commit(str(root), "journal: safe", ["entry.md"]))
+        self.assertEqual(before, self.git(root, "rev-parse", "HEAD"))
+        self.assertEqual("", self.git(root, "diff", "--cached", "--name-only"))
+        push.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
