@@ -75,6 +75,22 @@ class PrivacyTests(unittest.TestCase):
         self.assertNotIn("fake_temp_42", captured[0])
         self.assertNotIn("AcmeCorp", captured[0])
 
+    def test_saved_entry_and_metadata_use_scrubbed_text(self):
+        digest = self.root / "digest"
+        digest.write_text("safe session")
+        secret = "ghp_" + "z" * 30
+        args = argparse.Namespace(digest_file=str(digest), project="AcmeCorp",
+                                  session_id=secret, source="stop")
+        with mock.patch.object(journal, "run_llm", return_value=(
+                "# AcmeCorp choice\n\npassword=fake_output_42\n## Tags\n#AcmeCorp", "fake")), \
+                mock.patch.object(journal, "git_commit"):
+            self.assertEqual(0, journal.cmd_write(args))
+        paths = list((self.root / "notes").rglob("*"))
+        saved = "\n".join(str(p) + (p.read_text() if p.is_file() else "") for p in paths)
+        for value in (secret, "AcmeCorp", "fake_output_42"):
+            self.assertNotIn(value, saved)
+        self.assertIn("choice", saved)
+
 
 if __name__ == "__main__":
     unittest.main()
