@@ -19,6 +19,9 @@ Subcommands:
 
 import argparse
 import datetime
+import contextlib
+import secrets
+import stat
 import json
 import os
 import re
@@ -206,10 +209,59 @@ def project_slug(cwd):
     return slugify(safe_text(base), 40) if base else "misc"
 
 
+@contextlib.contextmanager
+def output_parent(root, path):
+    """Hold parent dir handles. Refuse links at output boundary."""
+    root = os.path.abspath(root)
+    relative = os.path.relpath(os.path.abspath(path), root)
+    parts = relative.split(os.sep)
+    if relative == "." or ".." in parts or os.path.islink(root):
+        raise ValueError("Output path blocked.")
+    os.makedirs(root, exist_ok=True)
+    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            try:
+                os.mkdir(part, dir_fd=fd)
+            except FileExistsError:
+                pass
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        try:
+            info = os.stat(parts[-1], dir_fd=fd, follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("Output path blocked.")
+        except FileNotFoundError:
+            pass
+        yield fd, parts[-1]
+    finally:
+        os.close(fd)
+
+
+def save_text(root, path, text, exclusive=False):
+    """Save through held dir. New entries use exclusive create."""
+    with output_parent(root, path) as (fd, name):
+        temp = name if exclusive else ".journal-" + secrets.token_hex(12)
+        handle = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                         0o600, dir_fd=fd)
+        try:
+            with os.fdopen(handle, "w", encoding="utf-8") as stream:
+                stream.write(text)
+            if not exclusive:
+                os.replace(temp, name, src_dir_fd=fd, dst_dir_fd=fd)
+        finally:
+            if not exclusive:
+                try:
+                    os.unlink(temp, dir_fd=fd)
+                except FileNotFoundError:
+                    pass
+
+
 def unique_path(directory, base):
     path = os.path.join(directory, base + ".md")
     n = 2
-    while os.path.exists(path):
+    while os.path.lexists(path):
         path = os.path.join(directory, f"{base}_{n}.md")
         n += 1
     return path
@@ -231,9 +283,7 @@ def is_duplicate(root, project, now_ts):
 
 
 def stamp_marker(root, project, session_id=""):
-    os.makedirs(os.path.join(root, project), exist_ok=True)
-    with open(marker_path(root, project), "w") as f:
-        f.write(f"{int(time.time())} {session_id}\n")
+    save_text(root, marker_path(root, project), f"{int(time.time())} {session_id}\n")
 
 
 # ── transcript extraction ────────────────────────────────────────────────────
@@ -470,9 +520,8 @@ def regenerate_index(project_dir):
         title = meta.get("title") or name
         tags = " ".join(f"#{t}" for t in meta.get("tags", []) if t and "/" not in t)
         rows.append(f"- {date} — [{title}]({name})" + (f" — {tags}" if tags else ""))
-    with open(os.path.join(project_dir, "INDEX.md"), "w") as f:
-        f.write(f"# Journal Index — {os.path.basename(project_dir)}\n\n")
-        f.write("\n".join(rows) + "\n")
+    save_text(os.path.dirname(project_dir), os.path.join(project_dir, "INDEX.md"),
+              f"# Journal Index: {os.path.basename(project_dir)}\n\n" + "\n".join(rows) + "\n")
 
 
 HOME_MD = """# § Journal
@@ -507,9 +556,9 @@ SORT length(rows) DESC
 def ensure_home(root):
     """Create the Obsidian Dataview dashboard once; never overwrite user edits."""
     path = os.path.join(root, "HOME.md")
-    if not os.path.exists(path):
-        with open(path, "w") as f:
-            f.write(HOME_MD)
+    with output_parent(root, path):
+        if not os.path.exists(path):
+            save_text(root, path, HOME_MD, exclusive=True)
 
 
 # ── git ──────────────────────────────────────────────────────────────────────
@@ -821,7 +870,10 @@ def cmd_write(args):
     })
     root = journal_root()
     project_dir = os.path.join(root, args.project)
-    os.makedirs(project_dir, exist_ok=True)
+    for path in (os.path.join(project_dir, "INDEX.md"),
+                 marker_path(root, args.project), os.path.join(root, "HOME.md")):
+        with output_parent(root, path):
+            pass
 
     now = datetime.datetime.now().astimezone()
     if hasattr(args, "summary"):
@@ -861,8 +913,7 @@ def cmd_write(args):
     base = f"{now.strftime('%Y-%m-%d_%H-%M')}_{slugify(title)}"
     entry_path = unique_path(project_dir, base)
     footer = f"\n\n---\n**Project:** [[{args.project}/INDEX|{args.project}]]\n"
-    with open(entry_path, "w") as f:
-        f.write(render_frontmatter(meta) + body + footer)
+    save_text(root, entry_path, render_frontmatter(meta) + body + footer, exclusive=True)
     ensure_home(root)
 
     stamp_marker(root, args.project, args.session_id)
@@ -920,10 +971,8 @@ def cmd_digest(days, project):
         print("digest generation failed (see .journal.log)")
         return 1
     ddir = os.path.join(root, "digests")
-    os.makedirs(ddir, exist_ok=True)
     out = os.path.join(ddir, f"{now.strftime('%Y-W%W')}.md")
-    with open(out, "w") as f:
-        f.write(safe_text(body) + "\n")
+    save_text(root, out, safe_text(body) + "\n")
     git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
                [os.path.relpath(out, root)])
     print(out)
@@ -1103,18 +1152,17 @@ def cmd_publish(entry, project, site):
 
     out_name = f"{date}-{slugify(title)}.md"
     out_path = os.path.join(site, "journal", out_name)
-    with open(out_path, "w") as f:
-        f.write(f"---\ntitle: {title}\ndate: {date}\n"
-                f"tags: {', '.join(tags)}\nexcerpt: {excerpt}\n---\n\n{body}")
+    with output_parent(site, os.path.join(site, "journal", "index.js")):
+        pass
+    save_text(site, out_path, f"---\ntitle: {title}\ndate: {date}\n"
+              f"tags: {', '.join(tags)}\nexcerpt: {excerpt}\n---\n\n{body}")
 
     # regenerate index.js — filenames sort newest-first by date prefix
     posts = sorted(
         (n for n in os.listdir(os.path.join(site, "journal"))
          if n.endswith(".md")), reverse=True)
-    with open(os.path.join(site, "journal", "index.js"), "w") as f:
-        f.write("window.JOURNAL_FILES = [\n")
-        f.write(",\n".join(f'  "journal/{n}"' for n in posts))
-        f.write("\n];\n")
+    save_text(site, os.path.join(site, "journal", "index.js"),
+              "window.JOURNAL_FILES = " + json.dumps(["journal/" + n for n in posts]) + ";\n")
 
     if not git_commit(site, f"journal: publish {title}",
                       [os.path.join("journal", out_name), "journal/index.js"]):
