@@ -667,6 +667,7 @@ def cmd_hook(source):
 
 
 def spawn_writer(root, project, session_id, source, digest):
+    digest = safe_text(digest)
     fd, tmp = tempfile.mkstemp(prefix="journal-digest-", suffix=".txt")
     with os.fdopen(fd, "w") as f:
         f.write(digest)
@@ -680,6 +681,7 @@ def spawn_writer(root, project, session_id, source, digest):
         stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
         start_new_session=True,
     )
+    logf.close()
     log_line(f"spawned writer project={project} source={source} chars={len(digest)}")
 
 
