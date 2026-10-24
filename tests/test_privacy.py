@@ -314,6 +314,21 @@ class PrivacyTests(unittest.TestCase):
         self.assertFalse(journal.git_push(str(root), run))
         self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
 
+    def test_split_push_url_blocks_before_upload(self):
+        root = self.repo()
+        fetch_remote = self.root / "fetch.git"
+        push_remote = self.root / "push.git"
+        for remote in (fetch_remote, push_remote):
+            self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(fetch_remote))
+        self.git(root, "push", "-u", "origin", "main")
+        self.git(root, "remote", "set-url", "--push", "origin", str(push_remote))
+        self.git(root, "commit", "--allow-empty", "-m", "safe")
+        def run(*args):
+            return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+        self.assertFalse(journal.git_push(str(root), run))
+        self.assertEqual("", self.git(push_remote, "for-each-ref", "--format=%(refname)"))
+
 
 if __name__ == "__main__":
     unittest.main()
