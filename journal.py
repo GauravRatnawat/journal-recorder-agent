@@ -344,7 +344,7 @@ def codex_session_meta(path):
     return {}
 
 
-def find_codex_rollout(cwd):
+def find_codex_rollout(cwd, session_id=""):
     """Newest recent main-thread rollout, preferring one whose cwd matches."""
     import glob as _glob
     pattern = os.path.join(os.path.expanduser(CODEX_SESSIONS),
@@ -352,17 +352,17 @@ def find_codex_rollout(cwd):
     now = time.time()
     files = [(os.path.getmtime(p), p) for p in _glob.glob(pattern)]
     files = [(m, p) for m, p in files if now - m < CODEX_ROLLOUT_MAX_AGE_SECS]
-    fallback = None
+    if not session_id or not cwd:
+        return None, {}
     for _, path in sorted(files, reverse=True):
         meta = codex_session_meta(path)
         source = meta.get("source")
         if isinstance(source, dict) and "subagent" in source:
             continue
-        if cwd and meta.get("cwd") == cwd:
+        if (meta.get("cwd") == cwd
+                and (meta.get("id") or meta.get("session_id")) == session_id):
             return path, meta
-        if fallback is None:
-            fallback = (path, meta)
-    return fallback or (None, {})
+    return None, {}
 
 
 def extract_codex_digest(rollout_path):
@@ -735,7 +735,7 @@ def cmd_hook_codex(payload_arg):
         return 0
 
     cwd = data.get("cwd") or os.getcwd()
-    rollout, meta = find_codex_rollout(cwd)
+    rollout, meta = find_codex_rollout(cwd, data.get("thread-id") or data.get("thread_id") or "")
     if not rollout:
         log_line("skip source=codex reason=no-recent-rollout")
         return 0
