@@ -19,6 +19,14 @@ class TestAgentTemplates(unittest.TestCase):
         self.assertIn("agent: [which agent you are:", template)
         self.assertNotIn("agent: codex\n", template)
 
+    def test_templates_submit_to_safe_core(self):
+        for name in ("journal-recorder.md", "codex-skill/SKILL.md", "SKILL.md"):
+            with self.subTest(name=name):
+                template = (REPO_ROOT / name).read_text()
+                self.assertIn("journal.py\" record", template)
+                self.assertNotIn('journal.py" finalize', template)
+                self.assertNotIn("Keep real names", template)
+
 
 if __name__ == "__main__":
     unittest.main()
