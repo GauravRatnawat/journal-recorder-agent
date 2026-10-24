@@ -373,6 +373,19 @@ class PrivacyTests(unittest.TestCase):
             self.assertEqual("", journal.run_llm("safe prompt")[0])
         codex.assert_not_called()
 
+    def test_public_publish_requires_local_policy(self):
+        self.rules.unlink()
+        site = self.root / "site"
+        (site / "journal").mkdir(parents=True)
+        entry = self.root / "entry.md"
+        entry.write_text("# Safe choice")
+        with mock.patch.object(journal, "run_llm", return_value=("# Safe choice", "fake")) as model, \
+                mock.patch.object(journal, "git_commit", return_value=True), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(1, journal.cmd_publish(str(entry), None, str(site)))
+        model.assert_not_called()
+        self.assertEqual([], list((site / "journal").iterdir()))
+
 
 if __name__ == "__main__":
     unittest.main()
