@@ -1077,8 +1077,8 @@ def cmd_publish(entry, project, site):
     # actual guarantee and runs last, so the LLM cannot reintroduce a banned term.
     rules, has_denylist = redact_rules()
     if not has_denylist:
-        print(f"warning: no denylist at {REDACT_CONFIG} — only built-in credential "
-              "patterns will be stripped. Add one line per name to keep private.")
+        print("Publish blocked: local privacy policy missing.")
+        return 1
     generic, _ = run_llm(REDACT_PROMPT.format(body=safe_text(body)))
     if not generic or not generic.strip():
         log_line("publish blocked: model failed")
