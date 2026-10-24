@@ -262,6 +262,24 @@ class PrivacyTests(unittest.TestCase):
                 self.assertNotIn("fake_adapter_42", text)
                 self.assertEqual(source, spawn.call_args.args[3])
 
+    def test_installer_merges_native_hooks_and_root_codex_notify(self):
+        home = self.root / "home"
+        (home / ".codex").mkdir(parents=True)
+        (home / ".codex/config.toml").write_text('[projects."/demo"]\ntrust_level = "trusted"\n')
+        env = {**os.environ, "HOME": str(home)}
+        script = Path(journal.__file__).parent / "install.sh"
+        for _ in range(2):
+            subprocess.run(["bash", str(script), "--agents", "claude,codex,cursor,gemini"],
+                           env=env, check=True, capture_output=True, text=True)
+        import tomllib
+        cfg = tomllib.loads((home / ".codex/config.toml").read_text())
+        self.assertIn("notify", cfg)
+        for tool, file, event in (("cursor", "hooks.json", "afterAgentResponse"),
+                                  ("gemini", "settings.json", "AfterAgent")):
+            config = json.loads((home / f".{tool}" / file).read_text())
+            self.assertEqual(1, len(config["hooks"][event]))
+        self.assertTrue((home / ".claude/hooks/journal.py").is_file())
+
 
 if __name__ == "__main__":
     unittest.main()
