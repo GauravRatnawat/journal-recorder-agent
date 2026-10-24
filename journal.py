@@ -203,7 +203,7 @@ def repo_root_name(cwd):
 
 def project_slug(cwd):
     base = repo_root_name(cwd) or os.path.basename((cwd or "").rstrip("/"))
-    return slugify(base, 40) if base else "misc"
+    return slugify(safe_text(base), 40) if base else "misc"
 
 
 def unique_path(directory, base):
@@ -793,7 +793,7 @@ def cmd_record():
     data = json.load(sys.stdin)
     if not isinstance(data, dict) or not isinstance(data.get("summary"), str):
         raise ValueError("Summary JSON needed.")
-    agent = slugify(str(data.get("agent", "agent"))) or "agent"
+    agent = slugify(safe_text(data.get("agent", "agent"))) or "agent"
     args = argparse.Namespace(project=project_slug(data.get("cwd") or os.getcwd()),
                               session_id=str(data.get("session_id", "")),
                               source=agent, summary=data["summary"], agent=agent)
