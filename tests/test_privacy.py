@@ -386,6 +386,25 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_replace_refs_cannot_hide_outgoing_secret(self):
+        root = self.repo()
+        remote = self.root / "remote.git"
+        self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        baseline = self.git(remote, "rev-parse", "main")
+        clean = self.git(root, "rev-parse", "HEAD:base.md")
+        (root / "entry.md").write_text("password=fake_replace_42")
+        self.git(root, "add", "entry.md")
+        self.git(root, "commit", "-m", "safe message")
+        self.git(root, "-c", "user.email=recorder@localhost", "commit", "--amend", "--reset-author", "--no-edit")
+        unsafe = self.git(root, "rev-parse", "HEAD:entry.md")
+        self.git(root, "replace", unsafe, clean)
+        def run(*args):
+            return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+        self.assertFalse(journal.git_push(str(root), run))
+        self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
+
 
 if __name__ == "__main__":
     unittest.main()
