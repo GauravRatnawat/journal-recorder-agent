@@ -406,7 +406,7 @@
       <div class="step">
         <div class="n">03</div>
         <h3>Detached writer</h3>
-        <p>A background process writes the entry via <code>claude -p</code> on Haiku — or <code>codex exec</code> on Codex-only machines — updates <code>INDEX.md</code>, commits, and pushes to your remote. Survives you closing the terminal.</p>
+        <p>Background writer uses Claude with tools disabled. Codex fallback needs explicit opt in. Reply scrubbed before save; Git gate checks exact files and outgoing history before push.</p>
       </div>
     </div>
   </div>
@@ -415,7 +415,7 @@
 <section id="features">
   <div class="wrap">
     <div class="kicker">the ledger</div>
-    <h2>Everything captured. Nothing lost.</h2>
+    <h2>Safe summary. Clear limits.</h2>
     <div class="ledger">
       <div class="row">
         <h3>Short enough to actually reread</h3>
@@ -431,15 +431,15 @@
       </div>
       <div class="row">
         <h3>Claude Code + Codex, and a skill for the rest</h3>
-        <p>One engine, both tools. Same project, same window → one entry, whichever finishes first. Codex rollouts parsed natively. Cursor, OpenCode, Gemini CLI and Copilot get the <code>journal-recorder</code> skill instead — no hook to fire there, so ask for an entry and you get the same format in the same folder.</p>
+        <p>Claude and Codex capture session text. Cursor and Gemini adapters use documented final text fields. Copilot, OpenCode and other agents send manual summary through same core. Optional Microsoft APM ships shared skill. Native adapters checked with fake payloads; live app smoke still needed.</p>
       </div>
       <div class="row">
         <h3>Auto-push to GitHub</h3>
-        <p>Journal root is a git repo. Every entry commits and pushes to your private remote. Offline? Next push carries the backlog.</p>
+        <p>Safe outputs commit with generic recorder identity. Push needs matching origin URLs, existing branch and clean outgoing scan. Old unsafe backlog blocks upload. No auto merge.</p>
       </div>
       <div class="row">
         <h3>Never silent, never lost</h3>
-        <p>Every run logs one line to <code>.journal.log</code>. If <code>claude -p</code> fails — token limits, rate limits, timeouts — generation falls back to <code>codex exec</code>, and if that fails too, a fallback entry with the raw session digest is written instead.</p>
+        <p>Failed model means entry skipped. No raw fallback. Known secrets scrub before model, temp and save. Codex generation needs explicit opt in. Pattern scan cannot prove all prose safe.</p>
       </div>
       <div class="row">
         <h3>Frontmatter + weekly digests</h3>
@@ -451,7 +451,7 @@
       </div>
       <div class="row">
         <h3>Redaction that isn't a prompt</h3>
-        <p>Entries keep real names — that's what makes them worth rereading. Publishing scrubs them: a generalizing pass rewrites prose, then a deterministic rule pass from your denylist runs <em>last</em>, so the model can't reintroduce a name. Credentials and emails go either way.</p>
+        <p>Shared filter strips known secret shapes and local banned terms before model and save. Git gate scans owned files and outgoing history. Bad policy blocks. Add private names to local rules. Review prose too; pattern scan has limits.</p>
       </div>
     </div>
   </div>
@@ -534,10 +534,13 @@ model: haiku · tags: [typescript, auth, debugging]
 <section id="install" class="install">
   <div class="wrap">
     <div class="kicker">install</div>
-    <h2>One command.</h2>
+    <h2>Review, then install.</h2>
 
-    <pre><span class="k">curl</span> -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/install.sh | <span class="k">bash</span></pre>
-    <p class="note">Engine, both hooks, the agent, and the <code>settings.json</code> merge (existing hooks preserved). The <code>journal-recorder</code> skill installs to <code>~/.agents/skills</code> for every agent that reads it. If Codex CLI is installed, its notify adapter gets wired too. Idempotent — safe to re-run. Prefer to see every step? <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install">Manual install in the README</a>.</p>
+    <pre>git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
+cd journal-recorder-agent
+git checkout FULL_REVIEWED_COMMIT_SHA
+bash install.sh --agents claude,codex,cursor,gemini</pre>
+    <p class="note">Review exact commit first. Pick only wanted hooks. Shared manual skill works across tools; optional APM distributes it. See <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install-reviewed-code">README</a> for scope, privacy limits and migration.</p>
 
     <h3>GitHub sync (optional, one command)</h3>
     <pre><span class="k">cd</span> "$(python3 ~/.claude/hooks/journal.py resolve-dir)"
@@ -562,7 +565,7 @@ model: haiku · tags: [typescript, auth, debugging]
       <dt>Where do entries live?</dt>
       <dd>In a local folder (default <code>~/claude-journal</code>) organized per project — which is also a git repo, an Obsidian vault, and auto-pushed to your private GitHub if you configure a remote.</dd>
       <dt>What happens when generation fails — rate limits, token limits?</dt>
-      <dd>A fallback entry with the raw session digest is written instead, and the failure is logged. No session is ever silently lost.</dd>
+      <dd>Entry skipped. Safe failure status logged. No raw transcript fallback saved or pushed.</dd>
     </dl>
   </div>
 </section>
@@ -581,7 +584,7 @@ model: haiku · tags: [typescript, auth, debugging]
     { "@type": "Question", "name": "Where are journal entries stored?",
       "acceptedAnswer": { "@type": "Answer", "text": "In a local folder (default ~/claude-journal) organized per project — also a git repo, an Obsidian vault, and auto-pushed to a private GitHub remote if configured." } },
     { "@type": "Question", "name": "What happens when journal generation fails due to rate or token limits?",
-      "acceptedAnswer": { "@type": "Answer", "text": "A fallback entry containing the raw session digest is written instead, and the failure is logged. No session is silently lost." } }
+      "acceptedAnswer": { "@type": "Answer", "text": "Entry skipped. Safe failure status logged. No raw transcript fallback saved or pushed." } }
   ]
 }
 </script>

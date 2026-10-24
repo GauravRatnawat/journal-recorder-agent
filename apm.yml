@@ -1,0 +1,6 @@
+name: journal-recorder-agent
+version: "2.0.0"
+description: Safe session summaries through one shared recorder core.
+author: Recorder Maintainer
+dependencies:
+  apm: []
