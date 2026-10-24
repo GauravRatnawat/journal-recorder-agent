@@ -727,6 +727,12 @@ def cmd_hook_codex(payload_arg):
 
 
 def cmd_write(args):
+    args = argparse.Namespace(**{
+        **vars(args),
+        "project": slugify(safe_text(args.project)) or "project",
+        "source": slugify(safe_text(args.source)) or "agent",
+        "session_id": safe_text(args.session_id).replace("\n", " "),
+    })
     root = journal_root()
     project_dir = os.path.join(root, args.project)
     os.makedirs(project_dir, exist_ok=True)
@@ -749,6 +755,7 @@ def cmd_write(args):
         log_line("writer skip: model failed")
         return 1
 
+    body = safe_text(body)
     title = extract_title(body)
     # nested tags (project/…, source/…) render as a tag tree in Obsidian
     tags = [f"project/{args.project}", f"source/{args.source}"] + parse_tags(body)
