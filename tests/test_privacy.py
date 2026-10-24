@@ -386,6 +386,18 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_publish_rejects_date_path_escape_before_write(self):
+        site = self.root / "site"
+        (site / "journal").mkdir(parents=True)
+        entry = self.root / "entry.md"
+        entry.write_text("---\ndate: ../../pwn\n---\n# Safe note")
+        with mock.patch.object(journal, "run_llm", return_value=("# Safe note\n", "fake")), \
+                mock.patch.object(journal, "git_commit"), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(1, journal.cmd_publish(str(entry), None, str(site)))
+        self.assertFalse((self.root / "pwn-safe-note.md").exists())
+        self.assertEqual([], list((site / "journal").iterdir()))
+
     def test_auth_forms_scrubbed_before_model_and_save(self):
         text = ("# Safe choice\nAuthorization: Basic ZmFrZV91c2VyOmZha2VfcGFzcw==\n"
                 "postgresql://fake_user:fake_pass@localhost:5432/demo\nKeep choice.")
