@@ -91,6 +91,31 @@ class PrivacyTests(unittest.TestCase):
             self.assertNotIn(value, saved)
         self.assertIn("choice", saved)
 
+    def git(self, root, *args):
+        return subprocess.run(["git", "-C", str(root), *args], check=True,
+                              capture_output=True, text=True).stdout.strip()
+
+    def repo(self):
+        root = self.root / "repo"
+        root.mkdir()
+        self.git(root, "init", "-b", "main")
+        self.git(root, "config", "user.name", "Test")
+        self.git(root, "config", "user.email", "test@example.test")
+        (root / "base.md").write_text("safe base")
+        self.git(root, "add", "base.md")
+        self.git(root, "commit", "-m", "base")
+        return root
+
+    def test_commit_blocks_unrelated_staged_data(self):
+        root = self.repo()
+        (root / "other.txt").write_text("unrelated")
+        self.git(root, "add", "other.txt")
+        (root / "entry.md").write_text("safe choice")
+        before = self.git(root, "rev-parse", "HEAD")
+        self.assertFalse(journal.git_commit(str(root), "journal: safe", ["entry.md"]))
+        self.assertEqual(before, self.git(root, "rev-parse", "HEAD"))
+        self.assertEqual("other.txt", self.git(root, "diff", "--cached", "--name-only"))
+
 
 if __name__ == "__main__":
     unittest.main()
