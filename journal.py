@@ -1013,8 +1013,10 @@ def redact_rules():
     try:
         with open(os.path.expanduser(REDACT_CONFIG)) as f:
             lines = f.read().splitlines()
-    except OSError:
+    except FileNotFoundError:
         return rules, False
+    except OSError:
+        raise ValueError("Privacy policy unreadable.") from None
     for line in lines:
         line = line.strip()
         if not line or line.startswith("#"):
