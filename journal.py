@@ -605,11 +605,16 @@ def git_push(root, run):
 
 def run_claude(prompt):
     try:
-        res = subprocess.run(
-            ["claude", "-p", "--system-prompt", SYSTEM_PROMPT,
-             "--model", MODEL, "--output-format", "text", prompt],
-            capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECS,
-        )
+        with tempfile.TemporaryDirectory(prefix="journal-model-") as cwd:
+            res = subprocess.run(
+                ["claude", "-p", "--system-prompt", SYSTEM_PROMPT,
+                 "--model", MODEL, "--output-format", "text", "--tools", "",
+                 "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
+                 "--disable-slash-commands", "--no-session-persistence",
+                 "--setting-sources", "", "--settings", '{"disableAllHooks":true}'],
+                input=prompt, cwd=cwd, capture_output=True, text=True,
+                timeout=CLAUDE_TIMEOUT_SECS,
+            )
         if res.returncode != 0:
             log_line(f"claude failed rc={res.returncode}")
             return ""
