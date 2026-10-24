@@ -1019,12 +1019,11 @@ def cmd_publish(entry, project, site):
     if not has_denylist:
         print(f"warning: no denylist at {REDACT_CONFIG} — only built-in credential "
               "patterns will be stripped. Add one line per name to keep private.")
-    generic, _ = run_llm(REDACT_PROMPT.format(body=body))
-    if generic:
-        body = generic
-    else:
-        log_line("publish: genericize pass failed; rule-based redaction only")
-        print("note: genericize pass failed — publishing with denylist redaction only")
+    generic, _ = run_llm(REDACT_PROMPT.format(body=safe_text(body)))
+    if not generic or not generic.strip():
+        log_line("publish blocked: model failed")
+        return 1
+    body = safe_text(generic)
     body, hits = redact(body, rules)
     for pattern, replacement, n in hits:
         print(f"redacted {n}x  {pattern} -> {replacement}")
