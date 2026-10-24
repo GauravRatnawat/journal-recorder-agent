@@ -145,6 +145,27 @@ class PrivacyTests(unittest.TestCase):
         self.assertFalse(journal.git_push(str(root), run))
         self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
 
+    def test_safe_writer_pushes_only_its_outputs(self):
+        root = self.repo()
+        remote = self.root / "remote.git"
+        self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        (root / "unrelated.txt").write_text("keep local")
+        digest = self.root / "digest"
+        digest.write_text("safe choice")
+        args = argparse.Namespace(digest_file=str(digest), project="demo",
+                                  session_id="s", source="stop")
+        with mock.patch.object(journal, "journal_root", return_value=str(root)), \
+                mock.patch.object(journal, "run_llm", return_value=("# Safe choice\n", "fake")):
+            self.assertEqual(0, journal.cmd_write(args))
+        self.assertEqual(self.git(root, "rev-parse", "HEAD"), self.git(remote, "rev-parse", "main"))
+        changed = self.git(root, "show", "--format=", "--name-only", "HEAD").splitlines()
+        self.assertIn("demo/INDEX.md", changed)
+        self.assertIn("HOME.md", changed)
+        self.assertTrue(any(p.startswith("demo/") and p.endswith(".md") and "INDEX" not in p for p in changed))
+        self.assertNotIn("unrelated.txt", self.git(root, "ls-files"))
+
 
 if __name__ == "__main__":
     unittest.main()
