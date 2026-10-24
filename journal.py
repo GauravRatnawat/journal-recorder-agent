@@ -612,14 +612,15 @@ def run_llm(prompt):
     """Try claude -p first; fall back to codex exec when claude is missing or
     returns nothing. Returns (body, model_label) — model_label goes into the
     entry frontmatter so entries record which CLI wrote them."""
+    prompt = safe_text(prompt)
     if shutil.which("claude"):
         body = run_claude(prompt)
         if body:
-            return body, MODEL
+            return safe_text(body), MODEL
     if shutil.which("codex"):
         body = run_codex(prompt)
         if body:
-            return body, "codex-exec"
+            return safe_text(body), "codex-exec"
     return "", MODEL
 
 
@@ -894,7 +895,18 @@ BUILTIN_REDACTIONS = [
     (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "<token>"),
     (re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}"), "<token>"),
     (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]{2,}"), "<email>"),
+    (re.compile(r"(?i)\bBearer\s+[A-Za-z0-9._~+/-]+=*"), "<credential>"),
+    (re.compile(r'''(?ix)\b(?:password|passwd|pwd|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|aws[_-]?secret[_-]?access[_-]?key|secret|token)["']?\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)'''), "<credential>"),
 ]
+
+
+def safe_text(text):
+    """Scrub text, then block if replacement leaves known secret."""
+    rules, _ = redact_rules()
+    clean, _ = redact(str(text), rules)
+    if any(rx.search(clean) for rx, _ in rules):
+        raise ValueError("Privacy scan blocked text.")
+    return clean
 
 
 def redact_rules():
