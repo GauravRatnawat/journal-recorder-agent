@@ -349,6 +349,22 @@ class PrivacyTests(unittest.TestCase):
             self.assertEqual("", journal.run_claude("safe prompt"))
         self.assertNotIn("fake_error_42", str(log.call_args_list))
 
+    def test_claude_generation_has_no_tools_or_project_context(self):
+        seen = []
+        def run(argv, **kwargs):
+            seen.append((argv, kwargs))
+            return subprocess.CompletedProcess(argv, 0, "# Safe choice", "")
+        with mock.patch.object(journal.subprocess, "run", side_effect=run):
+            self.assertEqual("# Safe choice", journal.run_claude("safe prompt"))
+        argv, kwargs = seen[0]
+        self.assertEqual("", argv[argv.index("--tools") + 1])
+        self.assertIn("--strict-mcp-config", argv)
+        self.assertIn("--disable-slash-commands", argv)
+        self.assertIn("--no-session-persistence", argv)
+        self.assertNotEqual(os.getcwd(), kwargs["cwd"])
+        self.assertEqual("safe prompt", kwargs["input"])
+        self.assertNotIn("safe prompt", argv)
+
 
 if __name__ == "__main__":
     unittest.main()
