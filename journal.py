@@ -874,16 +874,17 @@ def cmd_digest(days, project):
         "## Open Action Items, ## Themes. Output only the markdown.\n\n"
         f"ENTRIES:\n{combined}"
     )
-    body, _ = run_llm(prompt)
-    if not body:
+    body, _ = run_llm(safe_text(prompt))
+    if not body or not body.strip():
         print("digest generation failed (see .journal.log)")
         return 1
     ddir = os.path.join(root, "digests")
     os.makedirs(ddir, exist_ok=True)
     out = os.path.join(ddir, f"{now.strftime('%Y-W%W')}.md")
     with open(out, "w") as f:
-        f.write(body + "\n")
-    git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}")
+        f.write(safe_text(body) + "\n")
+    git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
+               [os.path.relpath(out, root)])
     print(out)
     return 0
 
