@@ -280,6 +280,14 @@ class PrivacyTests(unittest.TestCase):
             self.assertEqual(1, len(config["hooks"][event]))
         self.assertTrue((home / ".claude/hooks/journal.py").is_file())
 
+    def test_unreadable_policy_blocks_model(self):
+        self.rules.unlink()
+        self.rules.mkdir()
+        with mock.patch.object(journal, "run_claude") as provider:
+            with self.assertRaises(ValueError):
+                journal.run_llm("AcmeCorp choice")
+        provider.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
