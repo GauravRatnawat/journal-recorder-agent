@@ -1049,28 +1049,11 @@ def cmd_publish(entry, project, site):
         f.write(",\n".join(f'  "journal/{n}"' for n in posts))
         f.write("\n];\n")
 
-    def run(*cmd):
-        return subprocess.run(["git", "-C", site, *cmd],
-                              capture_output=True, text=True, timeout=120)
-    try:
-        run("add", "journal")
-        res = run("commit", "-m", f"journal: publish {title}")
-        if res.returncode == 0:
-            push = run("push")
-            if push.returncode != 0:
-                print(f"committed but push failed: {(push.stderr or '').strip()[:200]}")
-                return 1
-        else:
-            out = (res.stdout or "") + (res.stderr or "")
-            if "nothing to commit" not in out:
-                print(f"git commit failed: {out.strip()[:200]}")
-                return 1
-    except (OSError, subprocess.TimeoutExpired) as e:
-        print(f"git error: {e}")
+    if not git_commit(site, f"journal: publish {title}",
+                      [os.path.join("journal", out_name), "journal/index.js"]):
+        print("publish sync blocked. Check local policy and Git state.")
         return 1
-
     print(f"published: {out_path}")
-    print(f"live soon: https://gauravratnawat.com/journal/ (entry: {out_name})")
     return 0
 
 
