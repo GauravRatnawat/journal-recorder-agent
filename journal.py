@@ -559,6 +559,8 @@ def ensure_home(root):
     with output_parent(root, path):
         if not os.path.exists(path):
             save_text(root, path, HOME_MD, exclusive=True)
+            return True
+    return False
 
 
 # ── git ──────────────────────────────────────────────────────────────────────
@@ -914,12 +916,13 @@ def cmd_write(args):
     entry_path = unique_path(project_dir, base)
     footer = f"\n\n---\n**Project:** [[{args.project}/INDEX|{args.project}]]\n"
     save_text(root, entry_path, render_frontmatter(meta) + body + footer, exclusive=True)
-    ensure_home(root)
+    created_home = ensure_home(root)
 
     stamp_marker(root, args.project, args.session_id)
     regenerate_index(project_dir)
-    paths = [os.path.relpath(entry_path, root),
-             os.path.join(args.project, "INDEX.md"), "HOME.md"]
+    paths = [os.path.relpath(entry_path, root), os.path.join(args.project, "INDEX.md")]
+    if created_home:
+        paths.append("HOME.md")
     git_commit(root, f"journal: {args.project}: {title}", paths)
     log_line(f"ok wrote {entry_path} source={args.source}")
     return 0
