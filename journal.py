@@ -575,6 +575,10 @@ def git_push(root, run):
         base = checked("rev-parse", "FETCH_HEAD")
         head = checked("rev-parse", "HEAD")
         checked("merge-base", "--is-ancestor", base, head)
+        for commit in checked("rev-list", head, f"^{base}").splitlines():
+            names = checked("ls-tree", "-rz", "--name-only", commit)
+            if safe_text(names) != names:
+                raise ValueError("Unsafe tree paths.")
         objects = checked("rev-list", "--objects", head, f"^{base}")
         for row in objects.splitlines():
             oid, _, name = row.partition(" ")
