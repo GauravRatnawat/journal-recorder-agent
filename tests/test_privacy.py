@@ -49,6 +49,17 @@ class PrivacyTests(unittest.TestCase):
         self.assertNotIn("opaque_fake_42", body)
         self.assertNotIn("AcmeCorp", body)
 
+    def test_failed_model_saves_no_entry(self):
+        digest = self.root / "digest"
+        digest.write_text("raw session must stay out")
+        args = argparse.Namespace(digest_file=str(digest), project="demo",
+                                  session_id="session", source="stop")
+        with mock.patch.object(journal, "run_llm", return_value=("", "fake")), \
+                mock.patch.object(journal, "git_commit") as commit:
+            self.assertEqual(1, journal.cmd_write(args))
+        self.assertEqual([], list((self.root / "notes").rglob("*.md")))
+        commit.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
