@@ -1084,15 +1084,8 @@ def cmd_check():
 
 
 def cmd_finalize():
-    root = journal_root()
-    project = project_slug(os.getcwd())
-    stamp_marker(root, project)
-    project_dir = os.path.join(root, project)
-    if os.path.isdir(project_dir):
-        regenerate_index(project_dir)
-    git_commit(root, f"journal: {project} — manual entry")
-    print(f"finalized {project_dir}")
-    return 0
+    print("Direct finalize blocked. Send summary JSON to record.")
+    return 1
 
 
 def main():
