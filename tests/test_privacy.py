@@ -386,6 +386,17 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_auth_forms_scrubbed_before_model_and_save(self):
+        text = ("# Safe choice\nAuthorization: Basic ZmFrZV91c2VyOmZha2VfcGFzcw==\n"
+                "postgresql://fake_user:fake_pass@localhost:5432/demo\nKeep choice.")
+        with mock.patch.object(journal.shutil, "which", return_value="claude"), \
+                mock.patch.object(journal, "run_claude", return_value=text) as provider:
+            body, _ = journal.run_llm(text)
+        for clean in (provider.call_args.args[0], body):
+            self.assertNotIn("ZmFrZV91c2VyOmZha2VfcGFzcw==", clean)
+            self.assertNotIn("fake_pass", clean)
+            self.assertIn("Keep choice.", clean)
+
     def test_replace_refs_cannot_hide_outgoing_secret(self):
         root = self.repo()
         remote = self.root / "remote.git"
