@@ -569,6 +569,10 @@ def git_push(root, run):
         return result.stdout.strip()
 
     try:
+        fetch_urls = checked("remote", "get-url", "--all", "origin").splitlines()
+        push_urls = checked("remote", "get-url", "--push", "--all", "origin").splitlines()
+        if len(fetch_urls) != 1 or push_urls != fetch_urls:
+            raise ValueError("Git destinations differ.")
         branch = checked("symbolic-ref", "--short", "HEAD")
         checked("check-ref-format", "--branch", branch)
         checked("fetch", "--no-tags", "origin", f"refs/heads/{branch}")
