@@ -300,6 +300,20 @@ class PrivacyTests(unittest.TestCase):
         self.assertNotIn("registry-acme-internal", text)
         self.assertIn("hidden", text)
 
+    def test_push_checks_renamed_path_with_reused_blob(self):
+        root = self.repo()
+        remote = self.root / "remote.git"
+        self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        baseline = self.git(remote, "rev-parse", "main")
+        self.git(root, "mv", "base.md", "AcmeCorp.md")
+        self.git(root, "commit", "-m", "rename")
+        def run(*args):
+            return subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+        self.assertFalse(journal.git_push(str(root), run))
+        self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
+
 
 if __name__ == "__main__":
     unittest.main()
