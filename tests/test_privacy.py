@@ -342,6 +342,13 @@ class PrivacyTests(unittest.TestCase):
         self.assertFalse(journal.git_push(str(root), run))
         self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
 
+    def test_model_error_log_contains_no_provider_stderr(self):
+        result = subprocess.CompletedProcess([], 1, "", "password=fake_error_42")
+        with mock.patch.object(journal.subprocess, "run", return_value=result), \
+                mock.patch.object(journal, "log_line") as log:
+            self.assertEqual("", journal.run_claude("safe prompt"))
+        self.assertNotIn("fake_error_42", str(log.call_args_list))
+
 
 if __name__ == "__main__":
     unittest.main()
