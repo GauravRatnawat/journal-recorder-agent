@@ -561,31 +561,37 @@ def git_commit(root, message, paths=None):
 
 
 def git_push(root, run):
-    """Push to the first configured remote, if any. Failures only logged."""
+    """Scan new objects against fetched origin branch before push."""
+    def checked(*args):
+        result = run(*args)
+        if result.returncode:
+            raise ValueError("Git check failed.")
+        return result.stdout.strip()
+
     try:
-        remote = run("remote").stdout.split()
-        if not remote:
-            return
-        branch = run("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "HEAD"
-        res = run("push", remote[0], branch, "--quiet")
-        if res.returncode == 0:
-            return
-        # A clone that fell behind (journals written elsewhere, or the site repo
-        # pushing first) rejects every later push. Merge once and retry, so a
-        # single divergence cannot silently wedge publishing for weeks.
-        merge = run("pull", "--no-rebase", "--no-edit", "--autostash", "--quiet",
-                    remote[0], branch)
-        if merge.returncode != 0:
-            run("merge", "--abort")
-            log_line(f"git push blocked, merge failed: "
-                     f"{(merge.stderr or merge.stdout).strip()[:200]}")
-            return
-        res = run("push", remote[0], branch, "--quiet")
-        if res.returncode != 0:
-            log_line(f"git push failed after merge: "
-                     f"{(res.stderr or res.stdout).strip()[:200]}")
-    except (OSError, subprocess.TimeoutExpired) as e:
-        log_line(f"git push error: {e}")
+        branch = checked("symbolic-ref", "--short", "HEAD")
+        checked("check-ref-format", "--branch", branch)
+        checked("fetch", "--no-tags", "origin", f"refs/heads/{branch}")
+        base = checked("rev-parse", "FETCH_HEAD")
+        head = checked("rev-parse", "HEAD")
+        checked("merge-base", "--is-ancestor", base, head)
+        objects = checked("rev-list", "--objects", head, f"^{base}")
+        for row in objects.splitlines():
+            oid, _, name = row.partition(" ")
+            if safe_text(name) != name:
+                raise ValueError("Unsafe path.")
+            kind = checked("cat-file", "-t", oid)
+            if kind in ("blob", "commit"):
+                text = checked("cat-file", kind, oid)
+                if kind == "commit":
+                    text = text.partition("\n\n")[2]
+                if safe_text(text) != text:
+                    raise ValueError("Unsafe outgoing content.")
+        checked("push", "--no-follow-tags", "origin", f"{head}:refs/heads/{branch}")
+        return True
+    except (OSError, ValueError, UnicodeError, subprocess.TimeoutExpired):
+        log_line("push blocked: history scan or Git check failed")
+        return False
 
 
 # ── generation ───────────────────────────────────────────────────────────────
