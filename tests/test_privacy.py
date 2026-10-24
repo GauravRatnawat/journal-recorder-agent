@@ -244,6 +244,24 @@ class PrivacyTests(unittest.TestCase):
             self.assertEqual((None, {}), journal.find_codex_rollout("/missing", "wanted"))
             self.assertEqual((None, {}), journal.find_codex_rollout("/project", "missing"))
 
+    def test_native_text_adapters_send_only_documented_text(self):
+        fixtures = {
+            "cursor": {"hook_event_name": "afterAgentResponse", "conversation_id": "c",
+                       "workspace_roots": [str(self.root)], "text": "Safe choice. password=fake_adapter_42"},
+            "gemini": {"hook_event_name": "AfterAgent", "session_id": "g", "cwd": str(self.root),
+                       "prompt": "Keep choice clear", "prompt_response": "Safe choice. password=fake_adapter_42"},
+        }
+        for source, payload in fixtures.items():
+            with self.subTest(source=source), \
+                    mock.patch.object(sys, "stdin", io.StringIO(json.dumps(payload))), \
+                    mock.patch.object(journal, "spawn_writer") as spawn:
+                self.assertEqual(0, journal.cmd_hook_text(source))
+                self.assertEqual(1, spawn.call_count)
+                text = spawn.call_args.args[4]
+                self.assertIn("Safe choice", text)
+                self.assertNotIn("fake_adapter_42", text)
+                self.assertEqual(source, spawn.call_args.args[3])
+
 
 if __name__ == "__main__":
     unittest.main()
