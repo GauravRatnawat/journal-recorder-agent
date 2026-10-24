@@ -564,7 +564,7 @@ def git_commit(root, message, paths=None):
 def git_push(root, run):
     """Scan new objects against fetched origin branch before push."""
     def checked(*args):
-        result = run(*args)
+        result = run("--no-replace-objects", *args)
         if result.returncode:
             raise ValueError("Git check failed.")
         return result.stdout.strip()
