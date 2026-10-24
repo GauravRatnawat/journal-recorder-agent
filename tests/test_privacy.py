@@ -288,6 +288,18 @@ class PrivacyTests(unittest.TestCase):
                 journal.run_llm("AcmeCorp choice")
         provider.assert_not_called()
 
+    def test_raw_names_scrub_before_slug(self):
+        self.rules.write_text("registry.acme.internal => hidden\n")
+        data = {"agent": "registry.acme.internal", "cwd": "/tmp/registry.acme.internal",
+                "summary": "# Safe choice"}
+        with mock.patch.object(sys, "stdin", io.StringIO(json.dumps(data))), \
+                mock.patch.object(journal, "git_commit", return_value=True):
+            journal.cmd_record()
+        paths = list((self.root / "notes").rglob("*"))
+        text = "\n".join(str(p) + (p.read_text() if p.is_file() else "") for p in paths)
+        self.assertNotIn("registry-acme-internal", text)
+        self.assertIn("hidden", text)
+
 
 if __name__ == "__main__":
     unittest.main()
