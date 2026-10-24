@@ -193,6 +193,20 @@ class PrivacyTests(unittest.TestCase):
         self.assertIn("journal/index.js", paths)
         self.assertTrue(all(p.startswith("journal/") for p in paths))
 
+    def test_any_agent_can_submit_safe_summary_on_stdin(self):
+        payload = {"agent": "copilot", "cwd": str(self.root),
+                   "session_id": "s", "summary": "# Safe choice\npassword=fake_manual_42"}
+        with mock.patch.object(sys, "stdin", io.StringIO(json.dumps(payload))), \
+                mock.patch.object(journal, "git_commit", return_value=True), \
+                mock.patch.object(journal, "run_llm") as model:
+            self.assertEqual(0, journal.cmd_record())
+        entries = list((self.root / "notes").rglob("*.md"))
+        text = "\n".join(p.read_text() for p in entries)
+        self.assertIn("Safe choice", text)
+        self.assertIn("agent: copilot", text)
+        self.assertNotIn("fake_manual_42", text)
+        model.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
