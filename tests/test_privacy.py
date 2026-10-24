@@ -166,6 +166,18 @@ class PrivacyTests(unittest.TestCase):
         self.assertTrue(any(p.startswith("demo/") and p.endswith(".md") and "INDEX" not in p for p in changed))
         self.assertNotIn("unrelated.txt", self.git(root, "ls-files"))
 
+    def test_publish_failure_never_writes_or_commits(self):
+        site = self.root / "site"
+        (site / "journal").mkdir(parents=True)
+        entry = self.root / "entry.md"
+        entry.write_text("# Safe note\npassword=fake_publish_42")
+        with mock.patch.object(journal, "run_llm", return_value=("", "fake")), \
+                mock.patch.object(journal.subprocess, "run") as git, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(1, journal.cmd_publish(str(entry), None, str(site)))
+        self.assertEqual([], list((site / "journal").iterdir()))
+        git.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
