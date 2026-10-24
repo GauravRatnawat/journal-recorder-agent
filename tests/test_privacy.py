@@ -386,6 +386,16 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_metadata_quotes_round_trip_special_text(self):
+        values = {"title": 'Fix: "retry" loop', "project": "[cache]",
+                  "session_id": "line\nbreak", "tags": ["x,y", "[cache]"]}
+        entry = self.root / "quoted.md"
+        encoded = journal.render_frontmatter(values)
+        self.assertIn('title: "Fix:', encoded)
+        self.assertNotIn("line\nbreak", encoded)
+        entry.write_text(encoded + "# Note")
+        self.assertEqual(values, journal.parse_frontmatter(str(entry)))
+
     def test_existing_dashboard_edits_stay_local(self):
         root = self.repo()
         (root / "HOME.md").write_text("old dashboard")
