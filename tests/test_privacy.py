@@ -178,6 +178,21 @@ class PrivacyTests(unittest.TestCase):
         self.assertEqual([], list((site / "journal").iterdir()))
         git.assert_not_called()
 
+    def test_public_publish_uses_shared_git_gate(self):
+        site = self.root / "site"
+        (site / "journal").mkdir(parents=True)
+        entry = self.root / "entry.md"
+        entry.write_text("# Safe note")
+        with mock.patch.object(journal, "run_llm", return_value=("# Safe note\n", "fake")), \
+                mock.patch.object(journal, "git_commit", return_value=True) as commit, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(0, journal.cmd_publish(str(entry), None, str(site)))
+        self.assertEqual(1, commit.call_count)
+        paths = commit.call_args.args[2]
+        self.assertEqual(2, len(paths))
+        self.assertIn("journal/index.js", paths)
+        self.assertTrue(all(p.startswith("journal/") for p in paths))
+
 
 if __name__ == "__main__":
     unittest.main()
