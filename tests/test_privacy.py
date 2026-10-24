@@ -386,6 +386,20 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_existing_dashboard_edits_stay_local(self):
+        root = self.repo()
+        (root / "HOME.md").write_text("old dashboard")
+        self.git(root, "add", "HOME.md")
+        self.git(root, "commit", "-m", "dashboard")
+        (root / "HOME.md").write_text("user local edit")
+        args = argparse.Namespace(project="demo", session_id="s", source="manual",
+                                  summary="# Safe note")
+        with mock.patch.object(journal, "journal_root", return_value=str(root)), \
+                mock.patch.object(journal, "git_push", return_value=True):
+            self.assertEqual(0, journal.cmd_write(args))
+        self.assertEqual("old dashboard", self.git(root, "show", "HEAD:HOME.md"))
+        self.assertEqual("user local edit", (root / "HOME.md").read_text())
+
     def test_output_writes_refuse_symlinks(self):
         notes = self.root / "notes"
         notes.mkdir()
