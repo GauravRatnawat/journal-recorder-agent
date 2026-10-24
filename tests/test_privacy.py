@@ -386,6 +386,41 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_output_writes_refuse_symlinks(self):
+        notes = self.root / "notes"
+        notes.mkdir()
+        outside = self.root / "outside"
+        outside.mkdir()
+        sentinel = outside / "keep"
+        sentinel.write_text("keep bytes")
+        args = argparse.Namespace(project="demo", session_id="s", source="manual",
+                                  summary="# Safe note")
+        for target in ("demo", "demo/INDEX.md", "HOME.md", "demo/.last-written"):
+            with self.subTest(target=target):
+                case_root = notes / str(len(list(notes.iterdir())))
+                case_root.mkdir()
+                outside = self.root / ("outside" + case_root.name)
+                outside.mkdir()
+                sentinel = outside / "keep"
+                sentinel.write_text("keep bytes")
+                link = case_root / target
+                link.parent.mkdir(parents=True, exist_ok=True)
+                link.symlink_to(outside if target == "demo" else sentinel)
+                with mock.patch.object(journal, "git_commit", return_value=True), \
+                        mock.patch.object(journal, "journal_root", return_value=str(case_root)):
+                    try:
+                        result = journal.cmd_write(args)
+                    except (ValueError, OSError):
+                        result = 1
+                self.assertEqual("keep bytes", sentinel.read_text())
+                self.assertEqual([sentinel], list(outside.iterdir()))
+                self.assertEqual(1, result)
+                link.unlink()
+        dangling = notes / "demo" / "fresh.md"
+        dangling.parent.mkdir(exist_ok=True)
+        dangling.symlink_to(outside / "missing")
+        self.assertNotEqual(str(dangling), journal.unique_path(str(dangling.parent), "fresh"))
+
     def test_publish_rejects_date_path_escape_before_write(self):
         site = self.root / "site"
         (site / "journal").mkdir(parents=True)
