@@ -743,12 +743,9 @@ def cmd_write(args):
     now = datetime.datetime.now().astimezone()
     body, model = run_llm(PROMPT_TEMPLATE.format(
         date=now.strftime("%Y-%m-%d %H:%M"), digest=digest))
-    if not body:
-        body = (
-            f"# Session Journal — {now.strftime('%Y-%m-%d %H:%M')}\n\n"
-            "_Journal generation failed; raw session digest below._\n\n"
-            "```\n" + digest[:FALLBACK_EXCERPT_CHARS] + "\n```\n"
-        )
+    if not body or not body.strip():
+        log_line("writer skip: model failed")
+        return 1
 
     title = extract_title(body)
     # nested tags (project/…, source/…) render as a tag tree in Obsidian
