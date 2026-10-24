@@ -365,6 +365,14 @@ class PrivacyTests(unittest.TestCase):
         self.assertEqual("safe prompt", kwargs["input"])
         self.assertNotIn("safe prompt", argv)
 
+    def test_codex_provider_needs_explicit_opt_in(self):
+        with mock.patch.dict(os.environ, {}, clear=True), \
+                mock.patch.object(journal.shutil, "which", return_value="/bin/cli"), \
+                mock.patch.object(journal, "run_claude", return_value=""), \
+                mock.patch.object(journal, "run_codex", return_value="# Choice") as codex:
+            self.assertEqual("", journal.run_llm("safe prompt")[0])
+        codex.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
