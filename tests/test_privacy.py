@@ -207,6 +207,13 @@ class PrivacyTests(unittest.TestCase):
         self.assertNotIn("fake_manual_42", text)
         model.assert_not_called()
 
+    def test_finalize_refuses_direct_file_sync(self):
+        with mock.patch.object(journal, "git_commit") as commit, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(1, journal.cmd_finalize())
+        self.assertFalse((self.root / "notes").exists())
+        commit.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()
