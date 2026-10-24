@@ -525,6 +525,24 @@ def git_commit(root, message, paths=None):
         if not paths:
             log_line("sync blocked: owned paths missing")
             return False
+        base = os.path.realpath(root)
+        try:
+            if safe_text(message) != message:
+                raise ValueError("Unsafe message.")
+            for path in paths:
+                full = os.path.join(base, path)
+                if (os.path.isabs(path) or path.startswith("-")
+                        or os.path.commonpath([base, os.path.realpath(full)]) != base
+                        or not os.path.isfile(full) or os.path.islink(full)
+                        or safe_text(path) != path):
+                    raise ValueError("Unsafe path.")
+                with open(full, encoding="utf-8") as f:
+                    text = f.read()
+                if safe_text(text) != text:
+                    raise ValueError("Unsafe content.")
+        except (OSError, ValueError, UnicodeError):
+            log_line("sync blocked: privacy scan failed")
+            return False
         staged = run("diff", "--cached", "--name-only", "-z")
         if staged.returncode or staged.stdout:
             log_line("sync blocked: staged data exists")
