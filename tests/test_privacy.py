@@ -60,6 +60,21 @@ class PrivacyTests(unittest.TestCase):
         self.assertEqual([], list((self.root / "notes").rglob("*.md")))
         commit.assert_not_called()
 
+    def test_temp_digest_holds_only_scrubbed_text(self):
+        captured = []
+
+        def spawn(argv, **kwargs):
+            path = Path(argv[argv.index("--digest-file") + 1])
+            captured.append(path.read_text())
+            path.unlink()
+
+        with mock.patch.object(journal.subprocess, "Popen", side_effect=spawn):
+            journal.spawn_writer(str(self.root / "notes"), "demo", "s", "stop",
+                                 "Keep safe choice. password=fake_temp_42 AcmeCorp")
+        self.assertIn("Keep safe choice.", captured[0])
+        self.assertNotIn("fake_temp_42", captured[0])
+        self.assertNotIn("AcmeCorp", captured[0])
+
 
 if __name__ == "__main__":
     unittest.main()
