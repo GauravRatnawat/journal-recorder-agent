@@ -214,6 +214,21 @@ class PrivacyTests(unittest.TestCase):
         self.assertFalse((self.root / "notes").exists())
         commit.assert_not_called()
 
+    def test_digest_scrubs_output_before_owned_sync(self):
+        notes = self.root / "notes"
+        project = notes / "demo"
+        project.mkdir(parents=True)
+        import datetime
+        date = datetime.datetime.now().astimezone().isoformat()
+        (project / "entry.md").write_text(f"---\ndate: {date}\n---\n# Safe choice")
+        with mock.patch.object(journal, "run_llm", return_value=("# Digest\npassword=fake_digest_42", "fake")), \
+                mock.patch.object(journal, "git_commit", return_value=True) as commit, \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(0, journal.cmd_digest(7, None))
+        output = next((notes / "digests").glob("*.md"))
+        self.assertNotIn("fake_digest_42", output.read_text())
+        self.assertEqual([str(output.relative_to(notes))], commit.call_args.args[2])
+
 
 if __name__ == "__main__":
     unittest.main()
