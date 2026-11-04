@@ -461,10 +461,7 @@ def extract_codex_digest(rollout_path):
 def render_frontmatter(meta):
     lines = ["---"]
     for k, v in meta.items():
-        if isinstance(v, list):
-            lines.append(f"{k}: [{', '.join(v)}]")
-        else:
-            lines.append(f"{k}: {v}")
+        lines.append(f"{k}: {json.dumps(v, ensure_ascii=False)}")
     lines.append("---")
     return "\n".join(lines) + "\n\n"
 
@@ -482,10 +479,13 @@ def parse_frontmatter(path):
                     continue
                 k, v = line.split(":", 1)
                 v = v.strip()
-                if v.startswith("[") and v.endswith("]"):
-                    meta[k.strip()] = [x.strip() for x in v[1:-1].split(",") if x.strip()]
-                else:
-                    meta[k.strip()] = v
+                try:
+                    meta[k.strip()] = json.loads(v)
+                except ValueError:
+                    if v.startswith("[") and v.endswith("]"):
+                        meta[k.strip()] = [x.strip() for x in v[1:-1].split(",") if x.strip()]
+                    else:
+                        meta[k.strip()] = v
     except OSError:
         pass
     return meta
@@ -1157,8 +1157,8 @@ def cmd_publish(entry, project, site):
     out_path = os.path.join(site, "journal", out_name)
     with output_parent(site, os.path.join(site, "journal", "index.js")):
         pass
-    save_text(site, out_path, f"---\ntitle: {title}\ndate: {date}\n"
-              f"tags: {', '.join(tags)}\nexcerpt: {excerpt}\n---\n\n{body}")
+    save_text(site, out_path, render_frontmatter({"title": title, "date": date,
+              "tags": tags, "excerpt": excerpt}) + body)
 
     # regenerate index.js — filenames sort newest-first by date prefix
     posts = sorted(

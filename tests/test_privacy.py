@@ -203,7 +203,8 @@ class PrivacyTests(unittest.TestCase):
         entries = list((self.root / "notes").rglob("*.md"))
         text = "\n".join(p.read_text() for p in entries)
         self.assertIn("Safe choice", text)
-        self.assertIn("agent: copilot", text)
+        entry = next(p for p in entries if p.name not in ("HOME.md", "INDEX.md"))
+        self.assertEqual("copilot", journal.parse_frontmatter(str(entry))["agent"])
         self.assertNotIn("fake_manual_42", text)
         model.assert_not_called()
 
