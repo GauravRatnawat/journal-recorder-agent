@@ -20,6 +20,8 @@ Subcommands:
 import argparse
 import datetime
 import contextlib
+import functools
+import fcntl
 import secrets
 import stat
 import json
@@ -902,6 +904,30 @@ def cmd_record():
     return cmd_write(args)
 
 
+def locked_output(root_fn):
+    """One recorder save per root. Busy calls fail for later retry."""
+    def decorate(fn):
+        @functools.wraps(fn)
+        def wrapped(*args, **kwargs):
+            try:
+                root = root_fn(*args, **kwargs)
+                with output_parent(root, os.path.join(root, ".journal.lock")) as (fd, name):
+                    handle = os.open(name, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=fd)
+                    with os.fdopen(handle, "r+") as lock:
+                        try:
+                            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        except BlockingIOError:
+                            print("Recorder busy. Try again later.")
+                            return 1
+                        return fn(*args, **kwargs)
+            except (OSError, ValueError):
+                log_line("save blocked: path, policy or lock failed")
+                return 1
+        return wrapped
+    return decorate
+
+
+@locked_output(lambda args: journal_root())
 def cmd_write(args):
     args = argparse.Namespace(**{
         **vars(args),
@@ -970,6 +996,7 @@ def cmd_write(args):
     return 0
 
 
+@locked_output(lambda days, project: journal_root())
 def cmd_digest(days, project):
     root = journal_root()
     cutoff = datetime.datetime.now().astimezone() - datetime.timedelta(days=days)
@@ -1154,6 +1181,7 @@ def redact(text, rules):
     return text, hits
 
 
+@locked_output(lambda entry, project, site: site or site_root() or journal_root())
 def cmd_publish(entry, project, site):
     site = site or site_root()
     if not site or not os.path.isdir(os.path.join(site, "journal")):
