@@ -387,6 +387,20 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_hook_log_refuses_symlink_before_spawn(self):
+        notes = self.root / "notes"
+        notes.mkdir()
+        sentinel = self.root / "keep"
+        sentinel.write_text("keep bytes")
+        (notes / ".journal.log").symlink_to(sentinel)
+        with mock.patch.object(journal.subprocess, "Popen") as spawn:
+            try:
+                journal.spawn_writer(str(notes), "demo", "s", "stop", "safe choice")
+            except (ValueError, OSError):
+                pass
+        self.assertEqual("keep bytes", sentinel.read_text())
+        spawn.assert_not_called()
+
     def test_digest_and_publish_refuse_symlink_outputs(self):
         import datetime
         notes = self.root / "notes"
