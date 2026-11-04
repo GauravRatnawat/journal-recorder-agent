@@ -957,12 +957,15 @@ def cmd_write(args):
     save_text(root, entry_path, render_frontmatter(meta) + body + footer, exclusive=True)
     created_home = ensure_home(root)
 
-    stamp_marker(root, args.project, args.session_id)
     regenerate_index(project_dir)
     paths = [os.path.relpath(entry_path, root), os.path.join(args.project, "INDEX.md")]
     if created_home:
         paths.append("HOME.md")
-    git_commit(root, f"journal: {args.project}: {title}", paths)
+    if not git_commit(root, f"journal: {args.project}: {title}", paths):
+        log_line("saved local entry. Sync blocked. Dedup marker unchanged.")
+        print("Saved local entry. Sync blocked. Check Git state.")
+        return 1
+    stamp_marker(root, args.project, args.session_id)
     log_line(f"ok wrote {entry_path} source={args.source}")
     return 0
 
@@ -1015,8 +1018,10 @@ def cmd_digest(days, project):
     ddir = os.path.join(root, "digests")
     out = os.path.join(ddir, f"{now.strftime('%Y-W%W')}.md")
     save_text(root, out, safe_text(body) + "\n")
-    git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
-               [os.path.relpath(out, root)])
+    if not git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
+                      [os.path.relpath(out, root)]):
+        print("Saved local digest. Sync blocked. Check Git state.")
+        return 1
     print(out)
     return 0
 
