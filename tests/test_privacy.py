@@ -387,6 +387,23 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_commit_uses_scanned_bytes_when_worktree_changes(self):
+        root = self.repo()
+        entry = root / "entry.md"
+        entry.write_text("safe choice")
+        original = journal.safe_text
+        def scan(text):
+            clean = original(text)
+            if text == "safe choice":
+                entry.write_text("password=fake_race_42")
+            return clean
+        with mock.patch.object(journal, "safe_text", side_effect=scan), \
+                mock.patch.object(journal, "git_push", return_value=True):
+            self.assertTrue(journal.git_commit(str(root), "journal: safe", ["entry.md"]))
+        self.assertEqual("safe choice", self.git(root, "show", "HEAD:entry.md"))
+        self.assertEqual("password=fake_race_42", entry.read_text())
+        self.assertEqual("", self.git(root, "diff", "--cached", "--name-only"))
+
     def test_metadata_quotes_round_trip_special_text(self):
         values = {"title": 'Fix: "retry" loop', "project": "[cache]",
                   "session_id": "line\nbreak", "tags": ["x,y", "[cache]"]}
