@@ -661,8 +661,13 @@ def git_push(root, run):
             raise ValueError("Git destinations differ.")
         branch = checked("symbolic-ref", "--short", "HEAD")
         checked("check-ref-format", "--branch", branch)
-        checked("fetch", "--no-tags", "origin", f"refs/heads/{branch}")
-        base = checked("rev-parse", "FETCH_HEAD")
+        baseline_ref = "refs/journal-scan/" + secrets.token_hex(16)
+        try:
+            checked("fetch", "--no-tags", "--no-write-fetch-head", "origin",
+                    f"refs/heads/{branch}:{baseline_ref}")
+            base = checked("rev-parse", baseline_ref)
+        finally:
+            checked("update-ref", "-d", baseline_ref)
         head = checked("rev-parse", "HEAD")
         checked("merge-base", "--is-ancestor", base, head)
         for commit in checked("rev-list", head, f"^{base}").splitlines():
