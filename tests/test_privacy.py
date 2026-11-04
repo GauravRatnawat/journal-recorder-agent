@@ -387,6 +387,19 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_failed_sync_reports_local_save_without_dedup(self):
+        args = argparse.Namespace(project="demo", session_id="s", source="manual",
+                                  summary="# Safe note")
+        with mock.patch.object(journal, "git_commit", return_value=False):
+            self.assertEqual(1, journal.cmd_write(args))
+        notes = self.root / "notes"
+        self.assertTrue(list((notes / "demo").glob("*.md")))
+        self.assertFalse((notes / "demo" / ".last-written").exists())
+        with mock.patch.object(journal, "run_llm", return_value=("# Digest", "fake")), \
+                mock.patch.object(journal, "git_commit", return_value=False), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(1, journal.cmd_digest(7, "demo"))
+
     def test_push_ignores_other_fetch_head(self):
         root = self.repo()
         remote = self.root / "remote.git"
