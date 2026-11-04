@@ -387,6 +387,32 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_digest_and_publish_refuse_symlink_outputs(self):
+        import datetime
+        notes = self.root / "notes"
+        project = notes / "demo"
+        project.mkdir(parents=True)
+        entry = project / "entry.md"
+        entry.write_text("---\ndate: " + datetime.datetime.now().astimezone().isoformat() + "\n---\n# Safe note")
+        outside = self.root / "outside"
+        outside.mkdir()
+        (notes / "digests").symlink_to(outside)
+        with mock.patch.object(journal, "run_llm", return_value=("# Safe note", "fake")), \
+                mock.patch.object(journal, "git_commit", return_value=True), \
+                contextlib.redirect_stdout(io.StringIO()):
+            self.assertEqual(1, journal.cmd_digest(7, "demo"))
+            site = self.root / "site"
+            (site / "journal").mkdir(parents=True)
+            sentinel = outside / "keep"
+            sentinel.write_text("keep bytes")
+            for name in (datetime.date.today().isoformat() + "-safe-note.md", "index.js"):
+                link = site / "journal" / name
+                link.symlink_to(sentinel)
+                self.assertEqual(1, journal.cmd_publish(str(entry), None, str(site)))
+                self.assertEqual("keep bytes", sentinel.read_text())
+                link.unlink()
+        self.assertEqual([sentinel], list(outside.iterdir()))
+
     def test_overlapping_writer_cannot_change_active_transaction(self):
         args = argparse.Namespace(project="demo", session_id="s", source="manual",
                                   summary="# Safe note")
