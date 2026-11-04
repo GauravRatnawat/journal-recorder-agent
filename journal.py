@@ -577,6 +577,7 @@ def git_commit(root, message, paths=None):
             log_line("sync blocked: owned paths missing")
             return False
         base = os.path.realpath(root)
+        snapshots = []
         try:
             if safe_text(message) != message:
                 raise ValueError("Unsafe message.")
@@ -591,25 +592,58 @@ def git_commit(root, message, paths=None):
                     text = f.read()
                 if safe_text(text) != text:
                     raise ValueError("Unsafe content.")
+                snapshots.append((path, text))
         except (OSError, ValueError, UnicodeError):
             log_line("sync blocked: privacy scan failed")
             return False
-        staged = run("diff", "--cached", "--name-only", "-z")
-        if staged.returncode or staged.stdout:
-            log_line("sync blocked: staged data exists")
+        index_result = run("rev-parse", "--git-path", "index")
+        if index_result.returncode:
             return False
-        res = run("add", "--", *paths)
-        if res.returncode:
-            return False
-        res = run("-c", "user.name=Journal Recorder", "-c", "user.email=recorder@localhost",
-                  "commit", "--only", "-m", message, "--", *paths)
-        out = (res.stdout or "") + (res.stderr or "")
-        if res.returncode != 0 and "nothing to commit" not in out:
-            log_line(f"git commit failed: {out.strip()[:200]}")
-            return
+        index = os.path.abspath(os.path.join(root, index_result.stdout.strip()))
+        lock = index + ".lock"
+        with os.fdopen(os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                               0o600), "wb") as index_lock:
+            try:
+                staged = run("diff", "--cached", "--name-only", "-z")
+                if staged.returncode or staged.stdout:
+                    log_line("sync blocked: staged data exists")
+                    return False
+                head = run("rev-parse", "HEAD")
+                if head.returncode:
+                    return False
+                old = head.stdout.strip()
+                with tempfile.TemporaryDirectory(prefix="journal-index-") as tmp:
+                    private_index = os.path.join(tmp, "index")
+                    env = {**os.environ, "GIT_INDEX_FILE": private_index,
+                           "GIT_NO_REPLACE_OBJECTS": "1", "GIT_AUTHOR_NAME": "Journal Recorder",
+                           "GIT_AUTHOR_EMAIL": "recorder@localhost",
+                           "GIT_COMMITTER_NAME": "Journal Recorder",
+                           "GIT_COMMITTER_EMAIL": "recorder@localhost"}
+                    def snapshot_git(*cmd, data=None):
+                        result = subprocess.run(["git", "-C", root, *cmd], input=data,
+                                                env=env, capture_output=True, text=True, timeout=60)
+                        if result.returncode:
+                            raise ValueError("Snapshot commit blocked.")
+                        return result.stdout.strip()
+                    snapshot_git("read-tree", old)
+                    for path, text in snapshots:
+                        oid = snapshot_git("hash-object", "-w", "--stdin", data=text)
+                        snapshot_git("update-index", "--add", "--cacheinfo", "100644", oid, path)
+                    tree = snapshot_git("write-tree")
+                    if tree != snapshot_git("rev-parse", old + "^{tree}"):
+                        new = snapshot_git("commit-tree", tree, "-p", old, data=message + "\n")
+                        snapshot_git("update-ref", "HEAD", new, old)
+                    with open(private_index, "rb") as saved:
+                        shutil.copyfileobj(saved, index_lock)
+                    index_lock.flush()
+                    os.replace(lock, index)
+            finally:
+                if os.path.exists(lock):
+                    os.unlink(lock)
         return git_push(root, run)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        log_line(f"git unavailable: {e}")
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        log_line("sync blocked: Git snapshot or lock failed")
+        return False
 
 
 def git_push(root, run):
