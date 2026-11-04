@@ -35,4 +35,6 @@ Ruling: APM ships manual skill only. Native hooks stay in direct installer becau
 
 Ruling: root lock uses Unix flock. Target macOS and Linux. Cost: Windows needs future lock adapter. Busy writer exits for later retry. Failed sync keeps local entry and leaves dedup open; manual retry can create second entry.
 
-Checks: 62 fake tests pass. Prior coverage run at 61 tests measured 82%. Python compile, Bash syntax and diff whitespace pass. No live provider call, real transcript upload or machine config change. No prior exposure proved.
+Checks: 62 fake tests pass, 82% line coverage. Python compile, Bash syntax and diff whitespace pass. No live provider call, real transcript upload or machine config change. No prior exposure proved.
+
+Release: feature branch pushed. Remote GitHub APM pin smoke blocked by automatic approval review before command ran. Local five target smoke passed earlier. Remote package install remains unverified. Main merge and live hook rollout not done.
