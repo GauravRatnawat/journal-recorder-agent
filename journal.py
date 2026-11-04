@@ -165,11 +165,13 @@ def journal_root():
 def log_line(msg):
     root = journal_root()
     try:
-        os.makedirs(root, exist_ok=True)
         stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(os.path.join(root, ".journal.log"), "a") as f:
-            f.write(f"{stamp} {msg}\n")
-    except OSError:
+        with output_parent(root, os.path.join(root, ".journal.log")) as (fd, name):
+            handle = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW,
+                             0o600, dir_fd=fd)
+            with os.fdopen(handle, "a") as f:
+                f.write(f"{stamp} {msg}\n")
+    except (OSError, ValueError):
         pass
 
 
@@ -809,16 +811,21 @@ def spawn_writer(root, project, session_id, source, digest):
     with os.fdopen(fd, "w") as f:
         f.write(digest)
 
-    os.makedirs(root, exist_ok=True)
-    logf = open(os.path.join(root, ".journal.log"), "a")
-    subprocess.Popen(
-        [sys.executable, os.path.abspath(__file__), "write",
-         "--digest-file", tmp, "--project", project,
-         "--session-id", session_id, "--source", source],
-        stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
-        start_new_session=True,
-    )
-    logf.close()
+    try:
+        with output_parent(root, os.path.join(root, ".journal.log")) as (parent, name):
+            handle = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW,
+                             0o600, dir_fd=parent)
+            with os.fdopen(handle, "a") as logf:
+                subprocess.Popen(
+                    [sys.executable, os.path.abspath(__file__), "write",
+                     "--digest-file", tmp, "--project", project,
+                     "--session-id", session_id, "--source", source],
+                    stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
+                    start_new_session=True,
+                )
+    except (OSError, ValueError):
+        os.unlink(tmp)
+        raise
     log_line(f"spawned writer project={project} source={source} chars={len(digest)}")
 
 
