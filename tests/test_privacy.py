@@ -387,6 +387,25 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_push_ignores_other_fetch_head(self):
+        root = self.repo()
+        remote = self.root / "remote.git"
+        self.git(self.root, "init", "--bare", str(remote))
+        self.git(root, "remote", "add", "origin", str(remote))
+        self.git(root, "push", "-u", "origin", "main")
+        baseline = self.git(remote, "rev-parse", "main")
+        (root / "entry.md").write_text("password=fake_baseline_42")
+        self.git(root, "add", "entry.md")
+        self.git(root, "-c", "user.email=recorder@localhost", "commit", "-m", "note")
+        head = self.git(root, "rev-parse", "HEAD")
+        def run(*args):
+            result = subprocess.run(["git", "-C", str(root), *args], capture_output=True, text=True)
+            if "fetch" in args:
+                (root / ".git" / "FETCH_HEAD").write_text(head + "\n")
+            return result
+        self.assertFalse(journal.git_push(str(root), run))
+        self.assertEqual(baseline, self.git(remote, "rev-parse", "main"))
+
     def test_commit_uses_scanned_bytes_when_worktree_changes(self):
         root = self.repo()
         entry = root / "entry.md"
