@@ -1,20 +1,10 @@
 #!/usr/bin/env python3
-"""journal.py — journal-recorder engine.
+"""Shared recorder core. Stdlib only. macOS and Linux.
 
-Single source of truth behind the Stop/PostCompact hooks and the
-journal-recorder agent. Stdlib only.
-
-Subcommands:
-  hook stop|compact   fast path: dedup + substance check, extract transcript,
-                      spawn detached writer, exit immediately
-  write               background writer: claude -p (haiku, falls back to
-                      codex exec on Codex-only machines) -> entry file,
-                      INDEX.md, git commit, dedup marker
-  digest              roll last N days of entries into digests/YYYY-Wnn.md
-  resolve-dir         print journal root (for the agent)
-  check               print SKIP/PROCEED dedup verdict for current project
-  finalize            stamp marker + rebuild INDEX.md + git commit
-                      (for agent-written entries)
+Native hooks capture verified agent text. Manual record accepts summary JSON.
+Filter runs before model and save. Model failure skips entry. Root lock spans
+save and sync. Git commits scanned bytes, then checks outgoing history.
+Direct finalize blocked. Codex model fallback needs explicit opt in.
 """
 
 import argparse
@@ -399,7 +389,7 @@ def codex_session_meta(path):
 
 
 def find_codex_rollout(cwd, session_id=""):
-    """Newest recent main-thread rollout, preferring one whose cwd matches."""
+    """Find recent main session with exact thread and cwd."""
     import glob as _glob
     pattern = os.path.join(os.path.expanduser(CODEX_SESSIONS),
                            "*", "*", "*", "rollout-*.jsonl")
@@ -830,9 +820,7 @@ def spawn_writer(root, project, session_id, source, digest):
 
 
 def cmd_hook_codex(payload_arg):
-    """Codex notify adapter. Codex passes the notification JSON as an argv
-    argument, not stdin; the payload has no transcript path, so we locate the
-    newest main-thread rollout ourselves."""
+    """Codex notify JSON comes through argv. Match exact thread and cwd."""
     data = {}
     if payload_arg:
         try:
@@ -1210,9 +1198,7 @@ def cmd_publish(entry, project, site):
         print("Publish blocked: date invalid.")
         return 1
 
-    # Two-layer scrub. The LLM pass generalizes prose a pattern list cannot see
-    # ("we renamed the wrapper" vs a specific package name); the rule pass is the
-    # actual guarantee and runs last, so the LLM cannot reintroduce a banned term.
+    # Scrub both model boundaries. Patterns cannot prove prose private.
     rules, has_denylist = redact_rules()
     if not has_denylist:
         print("Publish blocked: local privacy policy missing.")

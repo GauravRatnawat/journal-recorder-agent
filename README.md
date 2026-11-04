@@ -19,7 +19,7 @@ Cursor and Gemini capture text supplied by hook. No whole transcript parser clai
 
 ## Install reviewed code
 
-Need Python 3.10+, Git, Bash. Python 3.11+ for full test suite. Claude CLI needed for automatic summary generation. Manual `record` needs no model CLI.
+Need macOS or Linux, Python 3.10+, Git, Bash. Root lock uses Unix `flock`. Python 3.11+ for full test suite. Claude CLI needed for automatic summary generation. Manual `record` needs no model CLI.
 
 ```sh
 git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
@@ -33,7 +33,7 @@ Pick only tools wanted. Default `bash install.sh` picks Claude and Codex. `--age
 
 Core lands at `~/.claude/hooks/journal.py`. Shared skill lands at `~/.agents/skills/journal-recorder`. Existing hook entries kept. Existing root Codex notify kept; installer prints notice. Codex allows one notify command, so chain recorder yourself only after review if another notify exists.
 
-Hook config locations: Claude `~/.claude/settings.json`, Cursor `~/.cursor/hooks.json`, Gemini `~/.gemini/settings.json`, Codex `~/.codex/config.toml`. Cursor may import Claude hooks too. Pick one route for capture; project dedup reduces repeat entries but does not lock concurrent writers.
+Hook config locations: Claude `~/.claude/settings.json`, Cursor `~/.cursor/hooks.json`, Gemini `~/.gemini/settings.json`, Codex `~/.codex/config.toml`. Cursor may import Claude hooks too. Pick one route for capture. Root lock covers save, generated files, commit and push. Busy writer exits with retry notice. Project dedup applies after successful sync.
 
 This repo update does not change already installed hooks. Run installer when ready to roll out reviewed version.
 
@@ -47,7 +47,9 @@ printf '%s\n' '~/Documents/my-journal' > ~/.claude/.journal-folder
 
 Use PRIVATE repo for real notes. Start from private repo clone with existing remote branch, then point config there. Recorder uses `origin` and current branch. It requires one identical fetch and push URL, fetches branch baseline, checks ancestry and scans outgoing objects, commit headers and paths. Missing branch, diverged history, unknown destination, secret match or scan error blocks push. No auto pull, merge or history rewrite.
 
-Recorder stages only current entry, project `INDEX.md` and `HOME.md`. Digest stages one digest file. Public publish stages one post plus post index. Existing staged data blocks commit. Other working files stay local. Recorder uses generic Git identity `Journal Recorder <recorder@localhost>`.
+Recorder commits current entry and generated project `INDEX.md`. `HOME.md` included only when recorder creates it. Existing dashboard edits stay local. Digest commits one digest file. Public publish commits one post plus post index. Existing staged data blocks commit. Private index holds exact scanned bytes; Git index lock plus checked branch update prevents reread race. Recorder uses generic Git identity `Journal Recorder <recorder@localhost>`.
+
+Output writes reject symlinks. New entry uses exclusive create. Generated files use safe replace through held parent directory. Metadata strings use YAML compatible JSON quotes. Failed sync returns nonzero, keeps local Markdown and leaves dedup marker unchanged. Retry may create new entry; inspect local files and Git state before manual retry.
 
 Old unpushed commits can block sync even when latest files look clean. Deleting secret in new commit does not erase older secret. Review history yourself. Recorder never rewrites journal history.
 
@@ -60,7 +62,7 @@ Agent text → deterministic scrub → temp/model → scrub reply and metadata
 → Markdown → exact file scan → commit → outgoing history scan → origin push
 ```
 
-Builtins match private keys, common GitHub/OpenAI/AWS/Slack token shapes, emails, Bearer credentials and common secret assignments. Add private org names, hosts, paths and ticket patterns to local `~/.claude/.journal-redact`:
+Builtins match private keys, common GitHub/OpenAI/AWS/Slack token shapes, emails, Bearer and Basic credentials, URL login fields and common secret assignments. Add private org names, hosts, paths and ticket patterns to local `~/.claude/.journal-redact`:
 
 ```text
 AcmeCorp => internal-org

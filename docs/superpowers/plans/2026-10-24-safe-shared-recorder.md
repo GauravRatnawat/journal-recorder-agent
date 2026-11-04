@@ -26,3 +26,13 @@ Replacement reintroduces secret. Invalid rules or unreadable config. Unrelated s
 ## Progress
 
 Baseline: 18 tests pass. Installed recorder matches repo. Privacy audit found save and push gaps, no prior leak proved. Branch: feat/safe-shared-recorder.
+
+Shared filter, safe save, exact session adapters, reviewed local installer and portable APM manual skill complete. APM 0.30.0 local consumer passed five target install and both deployed core smoke checks. Live hooks unchanged.
+
+Final review fixes proved RED then GREEN: Git replace bypass, Basic auth and URL login, publish date escape, symlink outputs, existing dashboard ownership, YAML quotes, scanned commit snapshot, isolated fetch baseline, failed sync status and root writer lock. Extra hook log symlink gap fixed same way.
+
+Ruling: APM ships manual skill only. Native hooks stay in direct installer because event aliases do not define transcript schema. Cost: manual invoke for Copilot and unverified tools.
+
+Ruling: root lock uses Unix flock. Target macOS and Linux. Cost: Windows needs future lock adapter. Busy writer exits for later retry. Failed sync keeps local entry and leaves dedup open; manual retry can create second entry.
+
+Checks: 62 fake tests pass. Prior coverage run at 61 tests measured 82%. Python compile, Bash syntax and diff whitespace pass. No live provider call, real transcript upload or machine config change. No prior exposure proved.
