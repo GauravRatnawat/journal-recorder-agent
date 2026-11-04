@@ -387,6 +387,20 @@ class PrivacyTests(unittest.TestCase):
         model.assert_not_called()
         self.assertEqual([], list((site / "journal").iterdir()))
 
+    def test_overlapping_writer_cannot_change_active_transaction(self):
+        args = argparse.Namespace(project="demo", session_id="s", source="manual",
+                                  summary="# Safe note")
+        nested = []
+        def commit(*unused):
+            with mock.patch.object(journal, "git_commit", return_value=True):
+                nested.append(journal.cmd_write(args))
+            return True
+        with mock.patch.object(journal, "git_commit", side_effect=commit):
+            self.assertEqual(0, journal.cmd_write(args))
+        self.assertEqual([1], nested)
+        entries = [p for p in (self.root / "notes" / "demo").glob("*.md") if p.name != "INDEX.md"]
+        self.assertEqual(1, len(entries))
+
     def test_failed_sync_reports_local_save_without_dedup(self):
         args = argparse.Namespace(project="demo", session_id="s", source="manual",
                                   summary="# Safe note")
