@@ -24,7 +24,7 @@ Need macOS or Linux, Python 3.10+, Git, Bash. Root lock uses Unix `flock`. Pytho
 ```sh
 git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
 cd journal-recorder-agent
-git checkout FULL_REVIEWED_COMMIT_SHA
+git checkout 8665f4bbf108edda89b61f85f70a016f6485637f
 python3 -m unittest discover -s tests
 bash install.sh --agents claude,codex,cursor,gemini
 ```
@@ -109,7 +109,7 @@ Markdown remains source of truth. Open journal folder as Obsidian vault if wante
 From project where skill should land:
 
 ```sh
-apm install 'GauravRatnawat/journal-recorder-agent#FULL_REVIEWED_COMMIT_SHA' --target claude,codex,copilot,cursor,gemini
+apm install 'GauravRatnawat/journal-recorder-agent#8665f4bbf108edda89b61f85f70a016f6485637f' --target claude,codex,copilot,cursor,gemini
 ```
 
 APM skill carries `journal.py` beside `SKILL.md`; use that engine path if direct install absent. No hook auto-activation from APM package. Native hooks use reviewed direct installer. This avoids aliasing one event into incompatible tool payloads and duplicate hook routes.
