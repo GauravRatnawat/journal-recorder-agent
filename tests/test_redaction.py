@@ -47,12 +47,9 @@ class TestRedaction(unittest.TestCase):
         self.assertTrue(exists)
         self.assertEqual(journal.BUILTIN_REDACTIONS, rules)
 
-    def test_a_malformed_regex_is_skipped_rather_than_aborting(self):
-        rules, _ = self.rules_from("re:[unclosed => x\nAcmeCorp\n")
-
-        redacted, _ = journal.redact("acmecorp ships", rules)
-
-        self.assertEqual("<redacted> ships", redacted)
+    def test_bad_rule_blocks_instead_of_skipping(self):
+        with self.assertRaisesRegex(ValueError, "Privacy rule invalid"):
+            self.rules_from("re:[unclosed => x\nAcmeCorp\n")
 
     def test_credentials_are_stripped_without_any_rules_file(self):
         journal_config = journal.REDACT_CONFIG

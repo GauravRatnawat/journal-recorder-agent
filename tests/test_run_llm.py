@@ -24,6 +24,12 @@ def _which(available):
 
 
 class TestRunLlm(unittest.TestCase):
+    def setUp(self):
+        for patch in (mock.patch.dict(os.environ, {"JOURNAL_ALLOW_CODEX": "1"}),
+                      mock.patch.object(journal, "REDACT_CONFIG", "/nonexistent-journal-test-policy")):
+            patch.start()
+            self.addCleanup(patch.stop)
+
     def test_claude_present_and_working_wins(self):
         with mock.patch.object(journal.shutil, "which", _which({"claude", "codex"})), \
              mock.patch.object(journal, "run_claude", return_value="claude body"), \

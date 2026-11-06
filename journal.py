@@ -1,24 +1,19 @@
 #!/usr/bin/env python3
-"""journal.py — journal-recorder engine.
+"""Shared recorder core. Stdlib only. macOS and Linux.
 
-Single source of truth behind the Stop/PostCompact hooks and the
-journal-recorder agent. Stdlib only.
-
-Subcommands:
-  hook stop|compact   fast path: dedup + substance check, extract transcript,
-                      spawn detached writer, exit immediately
-  write               background writer: claude -p (haiku, falls back to
-                      codex exec on Codex-only machines) -> entry file,
-                      INDEX.md, git commit, dedup marker
-  digest              roll last N days of entries into digests/YYYY-Wnn.md
-  resolve-dir         print journal root (for the agent)
-  check               print SKIP/PROCEED dedup verdict for current project
-  finalize            stamp marker + rebuild INDEX.md + git commit
-                      (for agent-written entries)
+Native hooks capture verified agent text. Manual record accepts summary JSON.
+Filter runs before model and save. Model failure skips entry. Root lock spans
+save and sync. Git commits scanned bytes, then checks outgoing history.
+Direct finalize blocked. Codex model fallback needs explicit opt in.
 """
 
 import argparse
 import datetime
+import contextlib
+import functools
+import fcntl
+import secrets
+import stat
 import json
 import os
 import re
@@ -160,11 +155,13 @@ def journal_root():
 def log_line(msg):
     root = journal_root()
     try:
-        os.makedirs(root, exist_ok=True)
         stamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-        with open(os.path.join(root, ".journal.log"), "a") as f:
-            f.write(f"{stamp} {msg}\n")
-    except OSError:
+        with output_parent(root, os.path.join(root, ".journal.log")) as (fd, name):
+            handle = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW,
+                             0o600, dir_fd=fd)
+            with os.fdopen(handle, "a") as f:
+                f.write(f"{stamp} {msg}\n")
+    except (OSError, ValueError):
         pass
 
 
@@ -203,13 +200,62 @@ def repo_root_name(cwd):
 
 def project_slug(cwd):
     base = repo_root_name(cwd) or os.path.basename((cwd or "").rstrip("/"))
-    return slugify(base, 40) if base else "misc"
+    return slugify(safe_text(base), 40) if base else "misc"
+
+
+@contextlib.contextmanager
+def output_parent(root, path):
+    """Hold parent dir handles. Refuse links at output boundary."""
+    root = os.path.abspath(root)
+    relative = os.path.relpath(os.path.abspath(path), root)
+    parts = relative.split(os.sep)
+    if relative == "." or ".." in parts or os.path.islink(root):
+        raise ValueError("Output path blocked.")
+    os.makedirs(root, exist_ok=True)
+    fd = os.open(root, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW)
+    try:
+        for part in parts[:-1]:
+            try:
+                os.mkdir(part, dir_fd=fd)
+            except FileExistsError:
+                pass
+            child = os.open(part, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW, dir_fd=fd)
+            os.close(fd)
+            fd = child
+        try:
+            info = os.stat(parts[-1], dir_fd=fd, follow_symlinks=False)
+            if not stat.S_ISREG(info.st_mode):
+                raise ValueError("Output path blocked.")
+        except FileNotFoundError:
+            pass
+        yield fd, parts[-1]
+    finally:
+        os.close(fd)
+
+
+def save_text(root, path, text, exclusive=False):
+    """Save through held dir. New entries use exclusive create."""
+    with output_parent(root, path) as (fd, name):
+        temp = name if exclusive else ".journal-" + secrets.token_hex(12)
+        handle = os.open(temp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                         0o600, dir_fd=fd)
+        try:
+            with os.fdopen(handle, "w", encoding="utf-8") as stream:
+                stream.write(text)
+            if not exclusive:
+                os.replace(temp, name, src_dir_fd=fd, dst_dir_fd=fd)
+        finally:
+            if not exclusive:
+                try:
+                    os.unlink(temp, dir_fd=fd)
+                except FileNotFoundError:
+                    pass
 
 
 def unique_path(directory, base):
     path = os.path.join(directory, base + ".md")
     n = 2
-    while os.path.exists(path):
+    while os.path.lexists(path):
         path = os.path.join(directory, f"{base}_{n}.md")
         n += 1
     return path
@@ -231,9 +277,7 @@ def is_duplicate(root, project, now_ts):
 
 
 def stamp_marker(root, project, session_id=""):
-    os.makedirs(os.path.join(root, project), exist_ok=True)
-    with open(marker_path(root, project), "w") as f:
-        f.write(f"{int(time.time())} {session_id}\n")
+    save_text(root, marker_path(root, project), f"{int(time.time())} {session_id}\n")
 
 
 # ── transcript extraction ────────────────────────────────────────────────────
@@ -344,25 +388,25 @@ def codex_session_meta(path):
     return {}
 
 
-def find_codex_rollout(cwd):
-    """Newest recent main-thread rollout, preferring one whose cwd matches."""
+def find_codex_rollout(cwd, session_id=""):
+    """Find recent main session with exact thread and cwd."""
     import glob as _glob
     pattern = os.path.join(os.path.expanduser(CODEX_SESSIONS),
                            "*", "*", "*", "rollout-*.jsonl")
     now = time.time()
     files = [(os.path.getmtime(p), p) for p in _glob.glob(pattern)]
     files = [(m, p) for m, p in files if now - m < CODEX_ROLLOUT_MAX_AGE_SECS]
-    fallback = None
+    if not session_id or not cwd:
+        return None, {}
     for _, path in sorted(files, reverse=True):
         meta = codex_session_meta(path)
         source = meta.get("source")
         if isinstance(source, dict) and "subagent" in source:
             continue
-        if cwd and meta.get("cwd") == cwd:
+        if (meta.get("cwd") == cwd
+                and (meta.get("id") or meta.get("session_id")) == session_id):
             return path, meta
-        if fallback is None:
-            fallback = (path, meta)
-    return fallback or (None, {})
+    return None, {}
 
 
 def extract_codex_digest(rollout_path):
@@ -411,10 +455,7 @@ def extract_codex_digest(rollout_path):
 def render_frontmatter(meta):
     lines = ["---"]
     for k, v in meta.items():
-        if isinstance(v, list):
-            lines.append(f"{k}: [{', '.join(v)}]")
-        else:
-            lines.append(f"{k}: {v}")
+        lines.append(f"{k}: {json.dumps(v, ensure_ascii=False)}")
     lines.append("---")
     return "\n".join(lines) + "\n\n"
 
@@ -432,10 +473,13 @@ def parse_frontmatter(path):
                     continue
                 k, v = line.split(":", 1)
                 v = v.strip()
-                if v.startswith("[") and v.endswith("]"):
-                    meta[k.strip()] = [x.strip() for x in v[1:-1].split(",") if x.strip()]
-                else:
-                    meta[k.strip()] = v
+                try:
+                    meta[k.strip()] = json.loads(v)
+                except ValueError:
+                    if v.startswith("[") and v.endswith("]"):
+                        meta[k.strip()] = [x.strip() for x in v[1:-1].split(",") if x.strip()]
+                    else:
+                        meta[k.strip()] = v
     except OSError:
         pass
     return meta
@@ -470,9 +514,8 @@ def regenerate_index(project_dir):
         title = meta.get("title") or name
         tags = " ".join(f"#{t}" for t in meta.get("tags", []) if t and "/" not in t)
         rows.append(f"- {date} — [{title}]({name})" + (f" — {tags}" if tags else ""))
-    with open(os.path.join(project_dir, "INDEX.md"), "w") as f:
-        f.write(f"# Journal Index — {os.path.basename(project_dir)}\n\n")
-        f.write("\n".join(rows) + "\n")
+    save_text(os.path.dirname(project_dir), os.path.join(project_dir, "INDEX.md"),
+              f"# Journal Index: {os.path.basename(project_dir)}\n\n" + "\n".join(rows) + "\n")
 
 
 HOME_MD = """# § Journal
@@ -507,14 +550,16 @@ SORT length(rows) DESC
 def ensure_home(root):
     """Create the Obsidian Dataview dashboard once; never overwrite user edits."""
     path = os.path.join(root, "HOME.md")
-    if not os.path.exists(path):
-        with open(path, "w") as f:
-            f.write(HOME_MD)
+    with output_parent(root, path):
+        if not os.path.exists(path):
+            save_text(root, path, HOME_MD, exclusive=True)
+            return True
+    return False
 
 
 # ── git ──────────────────────────────────────────────────────────────────────
 
-def git_commit(root, message):
+def git_commit(root, message, paths=None):
     def run(*cmd):
         return subprocess.run(
             ["git", "-C", root, *cmd], capture_output=True, text=True, timeout=60
@@ -522,60 +567,144 @@ def git_commit(root, message):
     try:
         if not os.path.isdir(os.path.join(root, ".git")):
             run("init")
-        run("add", "-A")
-        res = run("commit", "-m", message)
-        out = (res.stdout or "") + (res.stderr or "")
-        if res.returncode != 0 and "nothing to commit" not in out:
-            log_line(f"git commit failed: {out.strip()[:200]}")
-            return
-        git_push(root, run)
-    except (OSError, subprocess.TimeoutExpired) as e:
-        log_line(f"git unavailable: {e}")
+        if not paths:
+            log_line("sync blocked: owned paths missing")
+            return False
+        base = os.path.realpath(root)
+        snapshots = []
+        try:
+            if safe_text(message) != message:
+                raise ValueError("Unsafe message.")
+            for path in paths:
+                full = os.path.join(base, path)
+                if (os.path.isabs(path) or path.startswith("-")
+                        or os.path.commonpath([base, os.path.realpath(full)]) != base
+                        or not os.path.isfile(full) or os.path.islink(full)
+                        or safe_text(path) != path):
+                    raise ValueError("Unsafe path.")
+                with open(full, encoding="utf-8") as f:
+                    text = f.read()
+                if safe_text(text) != text:
+                    raise ValueError("Unsafe content.")
+                snapshots.append((path, text))
+        except (OSError, ValueError, UnicodeError):
+            log_line("sync blocked: privacy scan failed")
+            return False
+        index_result = run("rev-parse", "--git-path", "index")
+        if index_result.returncode:
+            return False
+        index = os.path.abspath(os.path.join(root, index_result.stdout.strip()))
+        lock = index + ".lock"
+        with os.fdopen(os.open(lock, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                               0o600), "wb") as index_lock:
+            try:
+                staged = run("diff", "--cached", "--name-only", "-z")
+                if staged.returncode or staged.stdout:
+                    log_line("sync blocked: staged data exists")
+                    return False
+                head = run("rev-parse", "HEAD")
+                if head.returncode:
+                    return False
+                old = head.stdout.strip()
+                with tempfile.TemporaryDirectory(prefix="journal-index-") as tmp:
+                    private_index = os.path.join(tmp, "index")
+                    env = {**os.environ, "GIT_INDEX_FILE": private_index,
+                           "GIT_NO_REPLACE_OBJECTS": "1", "GIT_AUTHOR_NAME": "Journal Recorder",
+                           "GIT_AUTHOR_EMAIL": "recorder@localhost",
+                           "GIT_COMMITTER_NAME": "Journal Recorder",
+                           "GIT_COMMITTER_EMAIL": "recorder@localhost"}
+                    def snapshot_git(*cmd, data=None):
+                        result = subprocess.run(["git", "-C", root, *cmd], input=data,
+                                                env=env, capture_output=True, text=True, timeout=60)
+                        if result.returncode:
+                            raise ValueError("Snapshot commit blocked.")
+                        return result.stdout.strip()
+                    snapshot_git("read-tree", old)
+                    for path, text in snapshots:
+                        oid = snapshot_git("hash-object", "-w", "--stdin", data=text)
+                        snapshot_git("update-index", "--add", "--cacheinfo", "100644", oid, path)
+                    tree = snapshot_git("write-tree")
+                    if tree != snapshot_git("rev-parse", old + "^{tree}"):
+                        new = snapshot_git("commit-tree", tree, "-p", old, data=message + "\n")
+                        snapshot_git("update-ref", "HEAD", new, old)
+                    with open(private_index, "rb") as saved:
+                        shutil.copyfileobj(saved, index_lock)
+                    index_lock.flush()
+                    os.replace(lock, index)
+            finally:
+                if os.path.exists(lock):
+                    os.unlink(lock)
+        return git_push(root, run)
+    except (OSError, ValueError, subprocess.TimeoutExpired):
+        log_line("sync blocked: Git snapshot or lock failed")
+        return False
 
 
 def git_push(root, run):
-    """Push to the first configured remote, if any. Failures only logged."""
+    """Scan new objects against fetched origin branch before push."""
+    def checked(*args):
+        result = run("--no-replace-objects", *args)
+        if result.returncode:
+            raise ValueError("Git check failed.")
+        return result.stdout.strip()
+
     try:
-        remote = run("remote").stdout.split()
-        if not remote:
-            return
-        branch = run("rev-parse", "--abbrev-ref", "HEAD").stdout.strip() or "HEAD"
-        res = run("push", remote[0], branch, "--quiet")
-        if res.returncode == 0:
-            return
-        # A clone that fell behind (journals written elsewhere, or the site repo
-        # pushing first) rejects every later push. Merge once and retry, so a
-        # single divergence cannot silently wedge publishing for weeks.
-        merge = run("pull", "--no-rebase", "--no-edit", "--autostash", "--quiet",
-                    remote[0], branch)
-        if merge.returncode != 0:
-            run("merge", "--abort")
-            log_line(f"git push blocked, merge failed: "
-                     f"{(merge.stderr or merge.stdout).strip()[:200]}")
-            return
-        res = run("push", remote[0], branch, "--quiet")
-        if res.returncode != 0:
-            log_line(f"git push failed after merge: "
-                     f"{(res.stderr or res.stdout).strip()[:200]}")
-    except (OSError, subprocess.TimeoutExpired) as e:
-        log_line(f"git push error: {e}")
+        fetch_urls = checked("remote", "get-url", "--all", "origin").splitlines()
+        push_urls = checked("remote", "get-url", "--push", "--all", "origin").splitlines()
+        if len(fetch_urls) != 1 or push_urls != fetch_urls:
+            raise ValueError("Git destinations differ.")
+        branch = checked("symbolic-ref", "--short", "HEAD")
+        checked("check-ref-format", "--branch", branch)
+        baseline_ref = "refs/journal-scan/" + secrets.token_hex(16)
+        try:
+            checked("fetch", "--no-tags", "--no-write-fetch-head", "origin",
+                    f"refs/heads/{branch}:{baseline_ref}")
+            base = checked("rev-parse", baseline_ref)
+        finally:
+            checked("update-ref", "-d", baseline_ref)
+        head = checked("rev-parse", "HEAD")
+        checked("merge-base", "--is-ancestor", base, head)
+        for commit in checked("rev-list", head, f"^{base}").splitlines():
+            names = checked("ls-tree", "-rz", "--name-only", commit)
+            if safe_text(names) != names:
+                raise ValueError("Unsafe tree paths.")
+        objects = checked("rev-list", "--objects", head, f"^{base}")
+        for row in objects.splitlines():
+            oid, _, name = row.partition(" ")
+            if safe_text(name) != name:
+                raise ValueError("Unsafe path.")
+            kind = checked("cat-file", "-t", oid)
+            if kind in ("blob", "commit"):
+                text = checked("cat-file", kind, oid)
+                if safe_text(text) != text:
+                    raise ValueError("Unsafe outgoing content.")
+        checked("push", "--no-follow-tags", "origin", f"{head}:refs/heads/{branch}")
+        return True
+    except (OSError, ValueError, UnicodeError, subprocess.TimeoutExpired):
+        log_line("push blocked: history scan or Git check failed")
+        return False
 
 
 # ── generation ───────────────────────────────────────────────────────────────
 
 def run_claude(prompt):
     try:
-        res = subprocess.run(
-            ["claude", "-p", "--system-prompt", SYSTEM_PROMPT,
-             "--model", MODEL, "--output-format", "text", prompt],
-            capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECS,
-        )
+        with tempfile.TemporaryDirectory(prefix="journal-model-") as cwd:
+            res = subprocess.run(
+                ["claude", "-p", "--system-prompt", SYSTEM_PROMPT,
+                 "--model", MODEL, "--output-format", "text", "--tools", "",
+                 "--strict-mcp-config", "--mcp-config", '{"mcpServers":{}}',
+                 "--disable-slash-commands", "--no-session-persistence",
+                 "--setting-sources", "", "--settings", '{"disableAllHooks":true}'],
+                input=prompt, cwd=cwd, capture_output=True, text=True,
+                timeout=CLAUDE_TIMEOUT_SECS,
+            )
         if res.returncode != 0:
-            log_line(f"claude -p failed rc={res.returncode}: {res.stderr.strip()[:300]}")
+            log_line(f"claude failed rc={res.returncode}")
             return ""
         return res.stdout.strip()
     except (subprocess.TimeoutExpired, OSError) as e:
-        log_line(f"claude -p error: {e}")
+        log_line("claude failed: launch or timeout")
         return ""
 
 
@@ -593,12 +722,12 @@ def run_codex(prompt):
             capture_output=True, text=True, timeout=CLAUDE_TIMEOUT_SECS,
         )
         if res.returncode != 0:
-            log_line(f"codex exec failed rc={res.returncode}: {res.stderr.strip()[:300]}")
+            log_line(f"codex failed rc={res.returncode}")
             return ""
         with open(out) as f:
             return f.read().strip()
     except (subprocess.TimeoutExpired, OSError) as e:
-        log_line(f"codex exec error: {e}")
+        log_line("codex failed: launch or timeout")
         return ""
     finally:
         if out:
@@ -612,14 +741,15 @@ def run_llm(prompt):
     """Try claude -p first; fall back to codex exec when claude is missing or
     returns nothing. Returns (body, model_label) — model_label goes into the
     entry frontmatter so entries record which CLI wrote them."""
+    prompt = safe_text(prompt)
     if shutil.which("claude"):
         body = run_claude(prompt)
         if body:
-            return body, MODEL
-    if shutil.which("codex"):
+            return safe_text(body), MODEL
+    if os.environ.get("JOURNAL_ALLOW_CODEX") == "1" and shutil.which("codex"):
         body = run_codex(prompt)
         if body:
-            return body, "codex-exec"
+            return safe_text(body), "codex-exec"
     return "", MODEL
 
 
@@ -666,26 +796,31 @@ def cmd_hook(source):
 
 
 def spawn_writer(root, project, session_id, source, digest):
+    digest = safe_text(digest)
     fd, tmp = tempfile.mkstemp(prefix="journal-digest-", suffix=".txt")
     with os.fdopen(fd, "w") as f:
         f.write(digest)
 
-    os.makedirs(root, exist_ok=True)
-    logf = open(os.path.join(root, ".journal.log"), "a")
-    subprocess.Popen(
-        [sys.executable, os.path.abspath(__file__), "write",
-         "--digest-file", tmp, "--project", project,
-         "--session-id", session_id, "--source", source],
-        stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
-        start_new_session=True,
-    )
+    try:
+        with output_parent(root, os.path.join(root, ".journal.log")) as (parent, name):
+            handle = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_APPEND | os.O_NOFOLLOW,
+                             0o600, dir_fd=parent)
+            with os.fdopen(handle, "a") as logf:
+                subprocess.Popen(
+                    [sys.executable, os.path.abspath(__file__), "write",
+                     "--digest-file", tmp, "--project", project,
+                     "--session-id", session_id, "--source", source],
+                    stdin=subprocess.DEVNULL, stdout=logf, stderr=logf,
+                    start_new_session=True,
+                )
+    except (OSError, ValueError):
+        os.unlink(tmp)
+        raise
     log_line(f"spawned writer project={project} source={source} chars={len(digest)}")
 
 
 def cmd_hook_codex(payload_arg):
-    """Codex notify adapter. Codex passes the notification JSON as an argv
-    argument, not stdin; the payload has no transcript path, so we locate the
-    newest main-thread rollout ourselves."""
+    """Codex notify JSON comes through argv. Match exact thread and cwd."""
     data = {}
     if payload_arg:
         try:
@@ -699,7 +834,7 @@ def cmd_hook_codex(payload_arg):
         return 0
 
     cwd = data.get("cwd") or os.getcwd()
-    rollout, meta = find_codex_rollout(cwd)
+    rollout, meta = find_codex_rollout(cwd, data.get("thread-id") or data.get("thread_id") or "")
     if not rollout:
         log_line("skip source=codex reason=no-recent-rollout")
         return 0
@@ -723,32 +858,107 @@ def cmd_hook_codex(payload_arg):
     return 0
 
 
+def cmd_hook_text(source):
+    """Native hooks supply final text. No transcript guess needed."""
+    data = json.load(sys.stdin)
+    if not isinstance(data, dict):
+        return 0
+    if source == "cursor":
+        if data.get("hook_event_name") != "afterAgentResponse":
+            return 0
+        roots = data.get("workspace_roots")
+        if not isinstance(roots, list) or len(roots) != 1:
+            return 0
+        cwd, session = roots[0], data.get("conversation_id")
+        text = data.get("text")
+    else:
+        if data.get("hook_event_name") != "AfterAgent" or data.get("stop_hook_active"):
+            return 0
+        cwd, session = data.get("cwd"), data.get("session_id")
+        text = data.get("prompt_response")
+        if isinstance(text, str) and isinstance(data.get("prompt"), str):
+            text = data["prompt"] + "\n\n" + text
+    if not isinstance(cwd, str) or not isinstance(session, str) or not isinstance(text, str) or not text.strip():
+        return 0
+    root = journal_root()
+    project = project_slug(cwd)
+    if not is_duplicate(root, project, int(time.time())):
+        spawn_writer(root, project, session, source, safe_text(text))
+    return 0
+
+
+def cmd_record():
+    """Any agent sends summary JSON on stdin. Core owns saved files."""
+    data = json.load(sys.stdin)
+    if not isinstance(data, dict) or not isinstance(data.get("summary"), str):
+        raise ValueError("Summary JSON needed.")
+    agent = slugify(safe_text(data.get("agent", "agent"))) or "agent"
+    args = argparse.Namespace(project=project_slug(data.get("cwd") or os.getcwd()),
+                              session_id=str(data.get("session_id", "")),
+                              source=agent, summary=data["summary"], agent=agent)
+    return cmd_write(args)
+
+
+def locked_output(root_fn):
+    """One recorder save per root. Busy calls fail for later retry."""
+    def decorate(fn):
+        @functools.wraps(fn)
+        def wrapped(*args, **kwargs):
+            try:
+                root = root_fn(*args, **kwargs)
+                with output_parent(root, os.path.join(root, ".journal.lock")) as (fd, name):
+                    handle = os.open(name, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600, dir_fd=fd)
+                    with os.fdopen(handle, "r+") as lock:
+                        try:
+                            fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                        except BlockingIOError:
+                            print("Recorder busy. Try again later.")
+                            return 1
+                        return fn(*args, **kwargs)
+            except (OSError, ValueError):
+                log_line("save blocked: path, policy or lock failed")
+                return 1
+        return wrapped
+    return decorate
+
+
+@locked_output(lambda args: journal_root())
 def cmd_write(args):
+    args = argparse.Namespace(**{
+        **vars(args),
+        "project": slugify(safe_text(args.project)) or "project",
+        "source": slugify(safe_text(args.source)) or "agent",
+        "session_id": safe_text(args.session_id).replace("\n", " "),
+    })
     root = journal_root()
     project_dir = os.path.join(root, args.project)
-    os.makedirs(project_dir, exist_ok=True)
-
-    try:
-        with open(args.digest_file) as f:
-            digest = f.read()
-    except OSError as e:
-        log_line(f"writer failed: digest file unreadable: {e}")
-        return 1
-    try:
-        os.unlink(args.digest_file)
-    except OSError:
-        pass
+    for path in (os.path.join(project_dir, "INDEX.md"),
+                 marker_path(root, args.project), os.path.join(root, "HOME.md")):
+        with output_parent(root, path):
+            pass
 
     now = datetime.datetime.now().astimezone()
-    body, model = run_llm(PROMPT_TEMPLATE.format(
-        date=now.strftime("%Y-%m-%d %H:%M"), digest=digest))
-    if not body:
-        body = (
-            f"# Session Journal — {now.strftime('%Y-%m-%d %H:%M')}\n\n"
-            "_Journal generation failed; raw session digest below._\n\n"
-            "```\n" + digest[:FALLBACK_EXCERPT_CHARS] + "\n```\n"
-        )
+    if hasattr(args, "summary"):
+        body, model = safe_text(args.summary), "agent-summary"
+    else:
+        try:
+            with open(args.digest_file) as f:
+                digest = f.read()
+        except OSError:
+            log_line("writer failed: digest unreadable")
+            return 1
+        finally:
+            try:
+                os.unlink(args.digest_file)
+            except OSError:
+                pass
+        body, model = run_llm(PROMPT_TEMPLATE.format(
+            date=now.strftime("%Y-%m-%d %H:%M"), digest=digest))
+    if not body or not body.strip():
+        log_line("writer skip: model failed")
+        return 1
 
+    body = safe_text(body)
     title = extract_title(body)
     # nested tags (project/…, source/…) render as a tag tree in Obsidian
     tags = [f"project/{args.project}", f"source/{args.source}"] + parse_tags(body)
@@ -758,23 +968,30 @@ def cmd_write(args):
         "date": now.isoformat(timespec="seconds"),
         "session_id": args.session_id or "unknown",
         "source": args.source,
+        "agent": safe_text(getattr(args, "agent", args.source)),
         "model": model,
         "tags": tags,
     }
     base = f"{now.strftime('%Y-%m-%d_%H-%M')}_{slugify(title)}"
     entry_path = unique_path(project_dir, base)
     footer = f"\n\n---\n**Project:** [[{args.project}/INDEX|{args.project}]]\n"
-    with open(entry_path, "w") as f:
-        f.write(render_frontmatter(meta) + body + footer)
-    ensure_home(root)
+    save_text(root, entry_path, render_frontmatter(meta) + body + footer, exclusive=True)
+    created_home = ensure_home(root)
 
-    stamp_marker(root, args.project, args.session_id)
     regenerate_index(project_dir)
-    git_commit(root, f"journal: {args.project} — {title}")
+    paths = [os.path.relpath(entry_path, root), os.path.join(args.project, "INDEX.md")]
+    if created_home:
+        paths.append("HOME.md")
+    if not git_commit(root, f"journal: {args.project}: {title}", paths):
+        log_line("saved local entry. Sync blocked. Dedup marker unchanged.")
+        print("Saved local entry. Sync blocked. Check Git state.")
+        return 1
+    stamp_marker(root, args.project, args.session_id)
     log_line(f"ok wrote {entry_path} source={args.source}")
     return 0
 
 
+@locked_output(lambda days, project: journal_root())
 def cmd_digest(days, project):
     root = journal_root()
     cutoff = datetime.datetime.now().astimezone() - datetime.timedelta(days=days)
@@ -816,16 +1033,17 @@ def cmd_digest(days, project):
         "## Open Action Items, ## Themes. Output only the markdown.\n\n"
         f"ENTRIES:\n{combined}"
     )
-    body, _ = run_llm(prompt)
-    if not body:
+    body, _ = run_llm(safe_text(prompt))
+    if not body or not body.strip():
         print("digest generation failed (see .journal.log)")
         return 1
     ddir = os.path.join(root, "digests")
-    os.makedirs(ddir, exist_ok=True)
     out = os.path.join(ddir, f"{now.strftime('%Y-W%W')}.md")
-    with open(out, "w") as f:
-        f.write(body + "\n")
-    git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}")
+    save_text(root, out, safe_text(body) + "\n")
+    if not git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
+                      [os.path.relpath(out, root)]):
+        print("Saved local digest. Sync blocked. Check Git state.")
+        return 1
     print(out)
     return 0
 
@@ -893,8 +1111,20 @@ BUILTIN_REDACTIONS = [
     (re.compile(r"\bsk-[A-Za-z0-9_-]{20,}"), "<token>"),
     (re.compile(r"\bAKIA[0-9A-Z]{16}\b"), "<token>"),
     (re.compile(r"\bxox[abposr]-[A-Za-z0-9-]{10,}"), "<token>"),
+    (re.compile(r"(?i)\b[a-z][a-z0-9+.-]*://[^\s/@]+@"), "<credential>@"),
     (re.compile(r"[\w.+-]+@[\w-]+\.[\w.]{2,}"), "<email>"),
+    (re.compile(r"(?i)\b(?:Bearer|Basic)\s+[A-Za-z0-9._~+/-]+=*"), "<credential>"),
+    (re.compile(r'''(?ix)\b(?:password|passwd|pwd|api[_-]?key|access[_-]?token|refresh[_-]?token|client[_-]?secret|aws[_-]?secret[_-]?access[_-]?key|secret|token)["']?\s*[:=]\s*(?:"[^"\n]*"|'[^'\n]*'|[^\s,;]+)'''), "<credential>"),
 ]
+
+
+def safe_text(text):
+    """Scrub text, then block if replacement leaves known secret."""
+    rules, _ = redact_rules()
+    clean, _ = redact(str(text), rules)
+    if any(rx.search(clean) for rx, _ in rules):
+        raise ValueError("Privacy scan blocked text.")
+    return clean
 
 
 def redact_rules():
@@ -914,8 +1144,10 @@ def redact_rules():
     try:
         with open(os.path.expanduser(REDACT_CONFIG)) as f:
             lines = f.read().splitlines()
-    except OSError:
+    except FileNotFoundError:
         return rules, False
+    except OSError:
+        raise ValueError("Privacy policy unreadable.") from None
     for line in lines:
         line = line.strip()
         if not line or line.startswith("#"):
@@ -927,8 +1159,8 @@ def redact_rules():
         if pattern.startswith("re:"):
             try:
                 rules.append((re.compile(pattern[3:].strip(), re.I), replacement))
-            except re.error as e:
-                log_line(f"redact: skipping bad regex {pattern!r}: {e}")
+            except re.error:
+                raise ValueError("Privacy rule invalid.") from None
         else:
             rules.append((re.compile(re.escape(pattern), re.I), replacement))
     return rules, True
@@ -944,6 +1176,7 @@ def redact(text, rules):
     return text, hits
 
 
+@locked_output(lambda entry, project, site: site or site_root() or journal_root())
 def cmd_publish(entry, project, site):
     site = site or site_root()
     if not site or not os.path.isdir(os.path.join(site, "journal")):
@@ -958,20 +1191,23 @@ def cmd_publish(entry, project, site):
     meta = parse_frontmatter(path)
     body = strip_entry_body(path)
     date = str(meta.get("date", ""))[:10] or datetime.date.today().isoformat()
+    try:
+        if datetime.date.fromisoformat(date).isoformat() != date:
+            raise ValueError("Bad date.")
+    except ValueError:
+        print("Publish blocked: date invalid.")
+        return 1
 
-    # Two-layer scrub. The LLM pass generalizes prose a pattern list cannot see
-    # ("we renamed the wrapper" vs a specific package name); the rule pass is the
-    # actual guarantee and runs last, so the LLM cannot reintroduce a banned term.
+    # Scrub both model boundaries. Patterns cannot prove prose private.
     rules, has_denylist = redact_rules()
     if not has_denylist:
-        print(f"warning: no denylist at {REDACT_CONFIG} — only built-in credential "
-              "patterns will be stripped. Add one line per name to keep private.")
-    generic, _ = run_llm(REDACT_PROMPT.format(body=body))
-    if generic:
-        body = generic
-    else:
-        log_line("publish: genericize pass failed; rule-based redaction only")
-        print("note: genericize pass failed — publishing with denylist redaction only")
+        print("Publish blocked: local privacy policy missing.")
+        return 1
+    generic, _ = run_llm(REDACT_PROMPT.format(body=safe_text(body)))
+    if not generic or not generic.strip():
+        log_line("publish blocked: model failed")
+        return 1
+    body = safe_text(generic)
     body, hits = redact(body, rules)
     for pattern, replacement, n in hits:
         print(f"redacted {n}x  {pattern} -> {replacement}")
@@ -984,41 +1220,23 @@ def cmd_publish(entry, project, site):
 
     out_name = f"{date}-{slugify(title)}.md"
     out_path = os.path.join(site, "journal", out_name)
-    with open(out_path, "w") as f:
-        f.write(f"---\ntitle: {title}\ndate: {date}\n"
-                f"tags: {', '.join(tags)}\nexcerpt: {excerpt}\n---\n\n{body}")
+    with output_parent(site, os.path.join(site, "journal", "index.js")):
+        pass
+    save_text(site, out_path, render_frontmatter({"title": title, "date": date,
+              "tags": tags, "excerpt": excerpt}) + body)
 
     # regenerate index.js — filenames sort newest-first by date prefix
     posts = sorted(
         (n for n in os.listdir(os.path.join(site, "journal"))
          if n.endswith(".md")), reverse=True)
-    with open(os.path.join(site, "journal", "index.js"), "w") as f:
-        f.write("window.JOURNAL_FILES = [\n")
-        f.write(",\n".join(f'  "journal/{n}"' for n in posts))
-        f.write("\n];\n")
+    save_text(site, os.path.join(site, "journal", "index.js"),
+              "window.JOURNAL_FILES = " + json.dumps(["journal/" + n for n in posts]) + ";\n")
 
-    def run(*cmd):
-        return subprocess.run(["git", "-C", site, *cmd],
-                              capture_output=True, text=True, timeout=120)
-    try:
-        run("add", "journal")
-        res = run("commit", "-m", f"journal: publish {title}")
-        if res.returncode == 0:
-            push = run("push")
-            if push.returncode != 0:
-                print(f"committed but push failed: {(push.stderr or '').strip()[:200]}")
-                return 1
-        else:
-            out = (res.stdout or "") + (res.stderr or "")
-            if "nothing to commit" not in out:
-                print(f"git commit failed: {out.strip()[:200]}")
-                return 1
-    except (OSError, subprocess.TimeoutExpired) as e:
-        print(f"git error: {e}")
+    if not git_commit(site, f"journal: publish {title}",
+                      [os.path.join("journal", out_name), "journal/index.js"]):
+        print("publish sync blocked. Check local policy and Git state.")
         return 1
-
     print(f"published: {out_path}")
-    print(f"live soon: https://gauravratnawat.com/journal/ (entry: {out_name})")
     return 0
 
 
@@ -1033,15 +1251,8 @@ def cmd_check():
 
 
 def cmd_finalize():
-    root = journal_root()
-    project = project_slug(os.getcwd())
-    stamp_marker(root, project)
-    project_dir = os.path.join(root, project)
-    if os.path.isdir(project_dir):
-        regenerate_index(project_dir)
-    git_commit(root, f"journal: {project} — manual entry")
-    print(f"finalized {project_dir}")
-    return 0
+    print("Direct finalize blocked. Send summary JSON to record.")
+    return 1
 
 
 def main():
@@ -1049,7 +1260,7 @@ def main():
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_hook = sub.add_parser("hook")
-    p_hook.add_argument("source", choices=["stop", "compact", "codex"])
+    p_hook.add_argument("source", choices=["stop", "compact", "codex", "cursor", "gemini"])
     p_hook.add_argument("payload", nargs="?", default="")
 
     p_write = sub.add_parser("write")
@@ -1067,15 +1278,20 @@ def main():
     p_pub.add_argument("--project", default="")
     p_pub.add_argument("--site", default="")
 
+    sub.add_parser("record")
     sub.add_parser("resolve-dir")
     sub.add_parser("check")
     sub.add_parser("finalize")
 
     args = parser.parse_args()
     if args.cmd == "hook":
+        if args.source in ("cursor", "gemini"):
+            return cmd_hook_text(args.source)
         if args.source == "codex":
             return cmd_hook_codex(args.payload)
         return cmd_hook(args.source)
+    if args.cmd == "record":
+        return cmd_record()
     if args.cmd == "write":
         return cmd_write(args)
     if args.cmd == "digest":

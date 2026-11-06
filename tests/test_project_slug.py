@@ -9,6 +9,7 @@ import sys
 import tempfile
 import unittest
 from pathlib import Path
+from unittest import mock
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(REPO_ROOT))
@@ -27,6 +28,11 @@ def git(cwd: Path, *args: str) -> None:
 
 
 class TestProjectSlug(unittest.TestCase):
+    def setUp(self):
+        policy = mock.patch.object(journal, "REDACT_CONFIG", "/nonexistent-journal-test-policy")
+        policy.start()
+        self.addCleanup(policy.stop)
+
     def test_plain_directory_falls_back_to_its_own_name(self) -> None:
         with tempfile.TemporaryDirectory() as tmp:
             plain = Path(tmp) / "not-a-repo"

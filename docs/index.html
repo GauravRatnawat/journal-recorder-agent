@@ -3,23 +3,23 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>journal-recorder — auto-journal for Claude Code &amp; Codex</title>
-<meta name="description" content="Every Claude Code and Codex session becomes a rich markdown journal entry — per project, indexed, auto-pushed to GitHub. You never lift a finger.">
-<meta name="keywords" content="claude code, codex cli, ai coding journal, session logging, developer journal, obsidian, markdown journal, claude hooks, anthropic, devlog, ai agent sessions, coding diary">
+<title>Journal Recorder | Shared agent work notes</title>
+<meta name="description" content="Short work notes in private Markdown. Shared core for Claude, Codex, Cursor and Gemini hooks. Manual skill for other agents. Known secrets scrubbed before model and save.">
+<meta name="keywords" content="claude code, codex cli, cursor, gemini cli, copilot, microsoft apm, developer journal, obsidian, private markdown, agent hooks, secret filter">
 <meta name="author" content="Gaurav Ratnawat">
 <meta name="robots" content="index, follow">
 <link rel="canonical" href="https://gauravratnawat.com/journal-recorder-agent/">
 <meta property="og:type" content="website">
 <meta property="og:site_name" content="gauravratnawat.com">
-<meta property="og:title" content="journal-recorder — auto-journal for Claude Code &amp; Codex">
-<meta property="og:description" content="Every AI coding session becomes a rich markdown journal entry — per project, indexed, Obsidian-ready, auto-pushed to GitHub. For your memory, not the machine's.">
+<meta property="og:title" content="Journal Recorder | Shared agent work notes">
+<meta property="og:description" content="Shared agent core saves short work notes in private Markdown. Known secrets scrubbed before model and save. Exact output commits and outgoing Git history checks.">
 <meta property="og:url" content="https://gauravratnawat.com/journal-recorder-agent/">
 <meta property="og:image" content="https://gauravratnawat.com/journal-recorder-agent/og-image.png">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="journal-recorder — auto-journal for Claude Code &amp; Codex">
-<meta name="twitter:description" content="Every AI coding session becomes a rich markdown journal entry — per project, indexed, Obsidian-ready, auto-pushed to GitHub.">
+<meta name="twitter:title" content="Journal Recorder | Shared agent work notes">
+<meta name="twitter:description" content="Short work notes in private Markdown. Native hooks for four tools. Manual summary for other agents. Optional Microsoft APM skill.">
 <meta name="twitter:image" content="https://gauravratnawat.com/journal-recorder-agent/og-image.png">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <script type="application/ld+json">
@@ -27,7 +27,7 @@
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
   "name": "journal-recorder",
-  "description": "Auto-journal for Claude Code and Codex — every AI coding session becomes a rich markdown journal entry: per project, indexed, Obsidian-ready, auto-pushed to GitHub.",
+  "description": "Shared agent recorder for private Markdown work notes. Known secrets scrubbed before model and save. Claude, Codex, Cursor and Gemini hooks; manual summary and optional APM skill for other agents.",
   "url": "https://gauravratnawat.com/journal-recorder-agent/",
   "applicationCategory": "DeveloperApplication",
   "operatingSystem": "macOS, Linux",
@@ -203,7 +203,7 @@
     font-size: 12px; letter-spacing: .14em; text-transform: lowercase;
     color: var(--orange); margin-bottom: 14px;
   }
-  .kicker::before, .kicker::after { content: "---"; color: var(--ink-mute); letter-spacing: 0; }
+  .kicker::before, .kicker::after { content: "·"; color: var(--ink-mute); letter-spacing: 0; }
   .kicker::before { margin-right: 10px; }
   .kicker::after { margin-left: 10px; }
   h2 {
@@ -228,7 +228,7 @@
   .step p { font-size: 14.5px; color: var(--ink-dim); }
   @media (max-width: 720px) { .steps { grid-template-columns: 1fr; } }
 
-  /* ledger — features as INDEX.md rows */
+  /* ledger rows */
   .ledger { border-top: 1px solid var(--rule); }
   .ledger .row {
     display: grid; grid-template-columns: 250px 1fr; gap: 8px 28px;
@@ -241,7 +241,7 @@
   .ledger p { font-size: 14.5px; color: var(--ink-dim); }
   @media (max-width: 720px) { .ledger .row { grid-template-columns: 1fr; } }
 
-  /* entry example — the notebook page (signature) */
+  /* sample note */
   #entry { background: var(--bg-2); }
   .paper-card {
     position: relative;
@@ -321,10 +321,24 @@
   .install h3:first-of-type { margin-top: 0; }
   .note { font-size: 14px; color: var(--ink-dim); }
 
-  /* tree — light pre variant */
+  /* file tree */
   pre.tree { background: var(--card); color: var(--ink-dim); border: 1px solid var(--rule); }
   .tree .d { color: var(--ink); font-weight: 500; }
   .tree .hl { color: var(--green); }
+
+  .table-scroll { overflow-x: auto; margin: 24px 0; }
+  table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+  caption { text-align: left; color: var(--ink-dim); margin-bottom: 12px; }
+  th, td { padding: 14px 12px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+  thead { background: var(--bg-2); }
+  a:focus-visible { outline: 2px solid var(--ink); outline-offset: 4px; }
+  @media (max-width: 640px) {
+    header .wrap { flex-direction: column; align-items: flex-start; gap: 16px; }
+    nav { display: flex; flex-wrap: wrap; gap: 16px; }
+    nav a { margin-left: 0; }
+    .wrap { padding: 0 16px; }
+    .paper-card { padding-right: 20px; }
+  }
 
   /* faq */
   .faq dl { max-width: 680px; }
@@ -355,8 +369,8 @@
     </div>
     <nav>
       <a href="#how">how</a>
-      <a href="#features">features</a>
-      <a href="#obsidian">obsidian</a>
+      <a href="#agents">agents</a>
+      <a href="#privacy">privacy</a>
       <a href="#install">install</a>
       <a href="https://github.com/GauravRatnawat/journal-recorder-agent">github</a>
     </nav>
@@ -365,12 +379,12 @@
 
 <div class="hero">
   <div class="wrap">
-    <div class="entry-no">entry № 941 <span class="dim">— nobody wrote it. everybody can read it.</span></div>
-    <h1>Your AI coding sessions,<br><em>journaled</em> while you sleep.</h1>
-    <p class="sub">Every <strong>Claude Code</strong> and <strong>Codex</strong> session becomes a short markdown journal entry — what changed, why, and the gotchas worth remembering. Sorted <strong>per project</strong>, indexed, committed, and <strong>pushed to your private GitHub</strong>. You never lift a finger.</p>
-    <p class="purpose">For <em>your</em> memory, not the machine's — so next month you can remember what you did, and find it.</p>
+    <div class="entry-no">shared core <span class="dim">· private notes · reviewed install</span></div>
+    <h1>Keep work choices.<br><em>Find them later.</em></h1>
+    <p class="sub">Short work notes from <strong>Claude, Codex, Cursor and Gemini</strong> hooks. Other agents send manual summary through same core. Known secrets scrubbed before model and save. Markdown stays in <strong>your private repo</strong>.</p>
+    <p class="purpose">Keep choice, reason, result and gotcha. Read next month with context still there.</p>
     <div class="cta-row">
-      <a class="btn primary" href="#install">Install — one command</a>
+      <a class="btn primary" href="#install">Review install steps</a>
       <a class="btn" href="https://github.com/GauravRatnawat/journal-recorder-agent">View source →</a>
     </div>
   </div>
@@ -381,7 +395,7 @@
     <div class="term">
       <div class="term-bar">
         <span class="dot r"></span><span class="dot y"></span><span class="dot g"></span>
-        <span class="term-title">~/my-repo — claude</span>
+        <span class="term-title">Fake run · success path</span>
       </div>
       <div class="term-body" id="term"><span class="cursor"></span></div>
     </div>
@@ -395,18 +409,18 @@
     <div class="steps">
       <div class="step">
         <div class="n">01</div>
-        <h3>Turn ends</h3>
-        <p>Claude's <code>Stop</code> hook, a <code>/compact</code>, or Codex's <code>notify</code> fires. The fast path checks the per-project dedup marker and substance — exits in under a second. Your session never waits.</p>
+        <h3>Capture work</h3>
+        <p>Native hook reads supported agent text. Claude and Codex check transcript substance. Codex must match exact thread and cwd. Other agents submit short summary JSON.</p>
       </div>
       <div class="step">
         <div class="n">02</div>
-        <h3>Full extraction</h3>
-        <p>The whole transcript — messages <em>plus tool calls</em>: every shell command, every file edit. Long sessions keep head + tail, middle elided at a 40k budget.</p>
+        <h3>Scrub known secrets</h3>
+        <p>Shared rules scrub before temp file and model call. Reply and metadata scrub again. Claude and Codex excerpts use 40k character budget. Cursor and Gemini supply hook text.</p>
       </div>
       <div class="step">
         <div class="n">03</div>
-        <h3>Detached writer</h3>
-        <p>A background process writes the entry via <code>claude -p</code> on Haiku — or <code>codex exec</code> on Codex-only machines — updates <code>INDEX.md</code>, commits, and pushes to your remote. Survives you closing the terminal.</p>
+        <h3>Save, scan, sync</h3>
+        <p>Root lock spans save and sync. Git commits exact scanned bytes, then checks outgoing history before push. Failed model skips entry. Failed sync keeps local note and reports failure.</p>
       </div>
     </div>
   </div>
@@ -415,44 +429,81 @@
 <section id="features">
   <div class="wrap">
     <div class="kicker">the ledger</div>
-    <h2>Everything captured. Nothing lost.</h2>
+    <h2>Safe summary. Clear limits.</h2>
     <div class="ledger">
       <div class="row">
-        <h3>Short enough to actually reread</h3>
-        <p>Under 400 words: the story, the decisions and why, the gotchas, and only the commands worth running again. No file inventory — git already records that exactly, and a hand-copied table just drifts.</p>
+        <h3>Short notes worth reread</h3>
+        <p>Writer aims under 400 words. Keep story, choice, reason, gotcha and useful commands. Git holds exact file changes. Review generated note before reuse.</p>
       </div>
       <div class="row">
-        <h3>Real commands, not hallucinated</h3>
-        <p>Tool calls feed the writer, so the commands in an entry are the ones that actually ran.</p>
+        <h3>Useful context, bounded capture</h3>
+        <p>Claude and Codex excerpts include tool calls. Writer aims for short notes with choice, reason and result. Review generated commands before reuse; model output can still be wrong.</p>
       </div>
       <div class="row">
         <h3>Per-repo folders</h3>
-        <p>Each repo gets its own subfolder, its own <code>INDEX.md</code>, its own 30-minute dedup marker. Parallel projects never block each other. Worktrees fold in: run five Conductor workspaces off one repo and they all land in that repo's folder, not five folders named after branches.</p>
+        <p>Each repo gets folder, <code>INDEX.md</code> and 30 minute marker after successful sync. Worktrees share repo name. One root lock guards shared files across projects. Busy writer exits with retry notice.</p>
       </div>
       <div class="row">
-        <h3>Claude Code + Codex, and a skill for the rest</h3>
-        <p>One engine, both tools. Same project, same window → one entry, whichever finishes first. Codex rollouts parsed natively. Cursor, OpenCode, Gemini CLI and Copilot get the <code>journal-recorder</code> skill instead — no hook to fire there, so ask for an entry and you get the same format in the same folder.</p>
+        <h3>Four native routes, one manual core</h3>
+        <p>Claude and Codex capture session text. Cursor and Gemini adapters use documented final text fields. Copilot, OpenCode and other agents send manual summary through same core. Optional Microsoft APM ships shared skill. Native adapters checked with fake payloads; live app smoke still needed.</p>
       </div>
       <div class="row">
         <h3>Auto-push to GitHub</h3>
-        <p>Journal root is a git repo. Every entry commits and pushes to your private remote. Offline? Next push carries the backlog.</p>
+        <p>Safe outputs commit with generic recorder identity. Push needs matching origin URLs, existing branch and clean outgoing scan. Old unsafe backlog blocks upload. No auto merge.</p>
       </div>
       <div class="row">
-        <h3>Never silent, never lost</h3>
-        <p>Every run logs one line to <code>.journal.log</code>. If <code>claude -p</code> fails — token limits, rate limits, timeouts — generation falls back to <code>codex exec</code>, and if that fails too, a fallback entry with the raw session digest is written instead.</p>
+        <h3>Clear failure states</h3>
+        <p>Failed model means entry skipped. No raw fallback. Known secrets scrub before model, temp and save. Codex generation needs explicit opt in. Pattern scan cannot prove all prose safe.</p>
       </div>
       <div class="row">
         <h3>Frontmatter + weekly digests</h3>
-        <p>YAML frontmatter on every entry — <a href="#obsidian">Obsidian-ready</a>. <code>journal.py digest --days 7</code> rolls the week into one page.</p>
+        <p>Each entry gets quoted YAML metadata for <a href="#obsidian">Obsidian</a>. <code>journal.py digest --days 7</code> turns week into short note through same scrub and sync gates.</p>
       </div>
       <div class="row">
-        <h3>Publish one entry to your site</h3>
-        <p><code>journal.py publish</code> converts an entry to your site's post format, regenerates the post index, commits and pushes. Nothing goes public unless you run it.</p>
+        <h3>Private site, separate renderer</h3>
+        <p><a href="https://github.com/GauravRatnawat/decision-ledger-setup">decision-ledger-setup</a> builds read site from private Markdown. Keep site behind your access controls. Legacy <code>publish</code> targets separate old public post format and needs local privacy policy.</p>
       </div>
       <div class="row">
         <h3>Redaction that isn't a prompt</h3>
-        <p>Entries keep real names — that's what makes them worth rereading. Publishing scrubs them: a generalizing pass rewrites prose, then a deterministic rule pass from your denylist runs <em>last</em>, so the model can't reintroduce a name. Credentials and emails go either way.</p>
+        <p>Shared filter strips known secret shapes and local banned terms before model and save. Git gate scans owned files and outgoing history. Bad policy blocks. Add private names to local rules. Review prose too; pattern scan has limits.</p>
       </div>
+    </div>
+  </div>
+</section>
+
+<section id="agents">
+  <div class="wrap">
+    <div class="kicker">agent support</div>
+    <h2>Pick capture route.</h2>
+    <div class="table-scroll"><table>
+      <caption>Supported routes and check scope</caption>
+      <thead><tr><th scope="col">Tool</th><th scope="col">Route</th><th scope="col">Proof</th></tr></thead>
+      <tbody>
+        <tr><th scope="row">Claude Code</th><td>Stop and PostCompact transcript hooks</td><td>Fake logs and temp installer</td></tr>
+        <tr><th scope="row">Codex CLI</th><td>Notify with exact thread and cwd</td><td>Fake rollout and skip checks</td></tr>
+        <tr><th scope="row">Cursor</th><td>afterAgentResponse final text</td><td>Documented field fixture</td></tr>
+        <tr><th scope="row">Gemini CLI</th><td>AfterAgent prompt plus reply</td><td>Documented field fixture</td></tr>
+        <tr><th scope="row">Copilot and other tools</th><td>Manual stdin summary or shared skill</td><td>Core tests and five target APM install</td></tr>
+      </tbody>
+    </table></div>
+    <p class="note">No live agent app capture smoke claimed. Cursor and Gemini use supplied text, not guessed transcript schema. Child agents can submit own summary; automatic child transcript capture absent.</p>
+  </div>
+</section>
+
+<section id="privacy">
+  <div class="wrap">
+    <div class="kicker">privacy and proof</div>
+    <h2>Known patterns. Clear limits.</h2>
+    <p class="lede">Builtins scrub private keys, common token shapes, email, Bearer and Basic auth, URL login and secret assignments. Add private org names, hosts and tickets to local policy.</p>
+    <pre>AcmeCorp =&gt; internal-org
+registry.acme.internal =&gt; internal-registry
+re:PROJ-\d+ =&gt; &lt;ticket&gt;</pre>
+    <p>Keep rules at <code>~/.claude/.journal-redact</code>, outside Git. Missing policy uses builtins only. Invalid, unreadable or residual matching rules block flow. Public publish needs policy file.</p>
+    <p class="note">Pattern scan cannot prove prose private. Model and Git traffic leave machine. Review summaries for business facts and names. Access controls on read site do not protect model or Git traffic.</p>
+    <div class="ledger" style="margin-top:28px">
+      <div class="row"><h3>62 tests. 82% coverage.</h3><p>Fake credentials, temp HOME and local bare Git remotes. Python compile, Bash syntax and whitespace checks pass. No live model call in suite.</p></div>
+      <div class="row"><h3>Exact scanned commit</h3><p>Private Git index commits checked bytes. Push scan reads original objects and isolated origin baseline. Old deleted secrets in outgoing history still block push.</p></div>
+      <div class="row"><h3>Owned output only</h3><p>Entry and generated project index included. HOME.md included only when first created. Existing dashboard edits stay local. Output writes reject symlinks.</p></div>
     </div>
   </div>
 </section>
@@ -460,29 +511,32 @@
 <section id="entry">
   <div class="wrap">
     <div class="kicker">specimen entry</div>
-    <h2>Entries a stranger could pick up cold.</h2>
-    <p class="lede">Written for a reader with zero context. Under 400 words, no file inventory, the why behind each decision.</p>
+    <h2>Keep reason with result.</h2>
+    <p class="lede">Fake sample below. Writer aims under 400 words, with enough context for next reader.</p>
     <div class="paper-card">
-      <div class="stamp">source: stop · auto</div>
+      <div class="stamp">fake sample · manual summary</div>
       <div class="fm">---
-title: Auth Refactor — Token Expiry Fix
-project: my-repo · date: 2026-07-17T14:30 · source: stop
-model: haiku · tags: [typescript, auth, debugging]
+title: "Keep one safe save path"
+project: "my-repo"
+date: "2026-11-06T14:30:00"
+source: "agent"
+agent: "copilot"
+tags: ["privacy", "automation"]
 ---</div>
-      <h3>Intermittent 401s were an off-by-one in token expiry</h3>
-      <p><strong>In one line:</strong> Auth middleware compared expiry with <code>&lt;</code> instead of <code>&lt;=</code>, so tokens died one second early.</p>
-      <h4>The story</h4>
-      <p>401s showed up under load and never in tests. Bisect point at the expiry refactor. Boundary was exclusive, so a token expiring exactly on the check tick read as dead.</p>
-      <h4>Why we chose what we chose</h4>
-      <p>Fixed the comparison rather than widening the window — a grace period would have hidden the real bug.</p>
-      <h4>Gotchas for whoever comes next</h4>
-      <p>Expiry bugs never reproduce in tests. Second-boundary case needs an explicit test; wall-clock timing will not hit it.</p>
-      <h4>Commands worth remembering</h4>
-      <p><code>git bisect start HEAD v2.3.0</code></p>
+      <h3>Keep one safe save path</h3>
+      <p><strong>In one line:</strong> Route manual summaries through shared recorder so scrub and sync gates stay same across tools.</p>
+      <h4>Story</h4>
+      <p>Separate scripts let each agent choose own save rules. Fake test showed one route could skip privacy scan.</p>
+      <h4>Choice and reason</h4>
+      <p>Send summary as stdin JSON. Core owns metadata, saved path and checked commit. Manual route needs no model call.</p>
+      <h4>Gotcha</h4>
+      <p>Pattern scan misses business facts and unknown secret shapes. Review prose before submit.</p>
+      <h4>Check worth keeping</h4>
+      <p><code>python3 -m unittest discover -s tests</code></p>
       <h4>Left undone</h4>
-      <ul><li>☐ Deploy to staging and watch 401 rate</li></ul>
+      <ul><li>☐ Run live agent capture smoke</li></ul>
       <div class="tags">
-        <span class="tag">#typescript</span><span class="tag">#auth</span><span class="tag">#debugging</span>
+        <span class="tag">#privacy</span><span class="tag">#automation</span>
       </div>
     </div>
   </div>
@@ -491,60 +545,76 @@ model: haiku · tags: [typescript, auth, debugging]
 <section id="layout">
   <div class="wrap">
     <div class="kicker">on disk</div>
-    <h2>One repo. Every project. Full history.</h2>
-    <pre class="tree">~/claude-journal/                <span class="hl">← git repo, auto-pushed</span>
+    <h2>Private repo. Project folders.</h2>
+    <pre class="tree">~/claude-journal/                <span class="hl">← private Git clone</span>
+├── HOME.md                      <span class="hl">← created once</span>
 ├── <span class="d">my-repo/</span>
-│   ├── INDEX.md                 <span class="hl">← auto-maintained index</span>
-│   ├── 2026-07-17_14-30_auth-refactor.md
-│   ├── <span class="d">commits/</span>                 <span class="hl">← per-commit journals (optional)</span>
-│   └── .last-written
+│   ├── INDEX.md                 <span class="hl">← generated project index</span>
+│   ├── 2026-11-06_14-30_safe-save.md
+│   └── .last-written            <span class="hl">← after sync succeeds</span>
 ├── <span class="d">other-project/</span>
-├── <span class="d">digests/</span>2026-W29.md
-└── .journal.log                 <span class="hl">← every run, one line</span></pre>
+├── <span class="d">digests/</span>2026-W45.md
+├── .journal.lock                <span class="hl">← shared save lock</span>
+└── .journal.log                 <span class="hl">← local status log</span></pre>
   </div>
 </section>
 
 <section id="obsidian">
   <div class="wrap">
     <div class="kicker">the vault</div>
-    <h2>Already an Obsidian vault.</h2>
+    <h2>Open same notes in Obsidian.</h2>
     <div class="ledger">
       <div class="row">
         <h3>Nested tag tree</h3>
-        <p>Every entry is tagged <code>project/&lt;repo&gt;</code> and <code>source/&lt;stop|codex|compact|agent&gt;</code> plus content tags — the tag pane becomes a filterable tree.</p>
+        <p>Core adds <code>project/&lt;repo&gt;</code> and source tag alongside content tags. Use tag pane to filter notes by project and capture route.</p>
       </div>
       <div class="row">
         <h3>Wikilinks + graph view</h3>
-        <p>Each entry links to its project's <code>INDEX</code> — in graph view, projects appear as hubs with their sessions orbiting around them.</p>
+        <p>Each entry links to project <code>INDEX</code>. Graph view groups linked notes around project hubs.</p>
       </div>
       <div class="row">
         <h3>HOME.md dashboard</h3>
-        <p>Auto-created once, never overwritten. Live tables of recent entries, open tasks across all projects, entries per project — powered by the community <strong>Dataview</strong> plugin; everything else works without it.</p>
+        <p>Created once. Existing edits stay yours. Optional <strong>Dataview</strong> plugin shows recent entries, open tasks and project counts. Plain Markdown works without plugin.</p>
       </div>
       <div class="row">
-        <h3>Journal on your phone</h3>
-        <p>Obsidian mobile + the <strong>Obsidian Git</strong> plugin, cloned from your private journal repo — every entry pushed from your machine appears on your phone.</p>
+        <h3>Journal on phone</h3>
+        <p>Set up own private vault sync for mobile. Recorder pushes checked notes to configured Git origin. Phone sync needs separate setup.</p>
       </div>
     </div>
     <pre style="margin-top:28px"><span class="k">open</span> "obsidian://open?path=$(python3 ~/.claude/hooks/journal.py resolve-dir)"</pre>
-    <p class="note">Or manually: <strong>Open folder as vault</strong> → your journal root (default <code>~/claude-journal</code> — the root, not a project subfolder). <code>HOME.md</code> is the dashboard.</p>
+    <p class="note">Or use <strong>Open folder as vault</strong> and pick journal root, default <code>~/claude-journal</code>. <code>HOME.md</code> holds dashboard queries.</p>
   </div>
 </section>
 
 <section id="install" class="install">
   <div class="wrap">
     <div class="kicker">install</div>
-    <h2>One command.</h2>
+    <h2>Review, then install.</h2>
 
-    <pre><span class="k">curl</span> -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/main/install.sh | <span class="k">bash</span></pre>
-    <p class="note">Engine, both hooks, the agent, and the <code>settings.json</code> merge (existing hooks preserved). The <code>journal-recorder</code> skill installs to <code>~/.agents/skills</code> for every agent that reads it. If Codex CLI is installed, its notify adapter gets wired too. Idempotent — safe to re-run. Prefer to see every step? <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install">Manual install in the README</a>.</p>
+    <pre>git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
+cd journal-recorder-agent
+git checkout 8665f4bbf108edda89b61f85f70a016f6485637f
+python3 -m unittest discover -s tests
+bash install.sh --agents claude,codex,cursor,gemini</pre>
+    <p class="note">Review exact commit first. Pick only wanted hooks. Shared manual skill works across tools; optional APM distributes it. See <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install-reviewed-code">README</a> for scope, privacy limits and migration.</p>
 
-    <h3>GitHub sync (optional, one command)</h3>
-    <pre><span class="k">cd</span> "$(python3 ~/.claude/hooks/journal.py resolve-dir)"
-<span class="k">gh</span> repo create claude-journal --private --source . --push</pre>
-    <p class="note">Every entry after this pushes itself.</p>
+    <h3>Choose private journal repo</h3>
+    <p>Start from private repo clone with existing remote branch. Point recorder at that clone:</p>
+    <pre>printf '%s\n' '/path/to/private-journal-clone' &gt; ~/.claude/.journal-folder</pre>
+    <p class="note">Sync needs matching origin fetch and push URLs, current remote branch, valid ancestry and clean outgoing scan. Old unsafe commits block upload. Existing staged data blocks recorder commit. Failed sync keeps local note; inspect Git before retry.</p>
 
-    <p class="note">Requirements: <a href="https://claude.ai/code">Claude Code</a> or <a href="https://github.com/openai/codex">Codex CLI</a> — either one — plus Python 3. That's the whole stack — no daemons, no databases, no dependencies.</p>
+    <h3>Optional Microsoft APM</h3>
+    <p>APM installs portable manual skill. Native hooks still use direct installer above.</p>
+    <pre>apm install 'GauravRatnawat/journal-recorder-agent#8665f4bbf108edda89b61f85f70a016f6485637f' --target claude,codex,copilot,cursor,gemini</pre>
+    <p class="note">Exact pin tested with APM 0.30.0 in temp home. Both deployed core copies passed fake record, secret scrub and push to local bare Git remote. APM package does not activate hooks.</p>
+
+    <h3>Send manual summary</h3>
+    <pre>python3 ~/.claude/hooks/journal.py record &lt;&lt;'JSON'
+{"agent":"copilot","cwd":"/path/to/project","session_id":"session-id","summary":"# Safe choice\n\nKeep reason and result.\n\n## Tags\n#journal #privacy"}
+JSON</pre>
+    <p class="note">For APM only install, use <code>journal.py</code> beside deployed <code>SKILL.md</code>. Core owns saved path, metadata and sync. Direct <code>finalize</code> blocked.</p>
+
+    <p class="note">Needs macOS or Linux, Python 3.10+, Git and Bash. Full tests need Python 3.11+. Automatic generation uses Claude CLI with tools, MCP and hooks disabled, fresh temp cwd and prompt on stdin. Codex generation requires <code>JOURNAL_ALLOW_CODEX=1</code>; read only sandbox has weaker isolation. Manual record needs no model CLI.</p>
   </div>
 </section>
 
@@ -553,16 +623,16 @@ model: haiku · tags: [typescript, auth, debugging]
     <div class="kicker">questions</div>
     <h2>Asked often.</h2>
     <dl>
-      <dt>Is this agent memory for Claude or Codex?</dt>
-      <dd>No. Claude and Codex have their own memory systems for carrying context between sessions. journal-recorder is for <em>you</em> — a human-readable record so you can remember what you did and find it later.</dd>
-      <dt>Does it slow down my sessions?</dt>
-      <dd>No. The hook exits in under a second; journal generation runs in a detached background process on Haiku and survives you closing the terminal.</dd>
-      <dt>Does it work with both Claude Code and Codex CLI?</dt>
-      <dd>Yes — one engine, both tools. Claude Code via Stop/PostCompact hooks, Codex via its notify setting. Same project within 30 minutes journals once, not twice.</dd>
+      <dt>Which agents can record work?</dt>
+      <dd>Claude and Codex use transcript hooks. Cursor and Gemini use documented hook text. Copilot and other agents send manual summary through shared skill or stdin JSON.</dd>
+      <dt>Does capture wait for model?</dt>
+      <dd>Native hooks spawn detached writer. No fixed timing guarantee. Root lock spans save and sync; busy writer exits with retry notice.</dd>
+      <dt>What does APM install?</dt>
+      <dd>Manual skill plus core for chosen targets. Native hooks still need reviewed direct installer. APM does not normalize transcript schemas or activate universal hooks.</dd>
       <dt>Where do entries live?</dt>
-      <dd>In a local folder (default <code>~/claude-journal</code>) organized per project — which is also a git repo, an Obsidian vault, and auto-pushed to your private GitHub if you configure a remote.</dd>
-      <dt>What happens when generation fails — rate limits, token limits?</dt>
-      <dd>A fallback entry with the raw session digest is written instead, and the failure is logged. No session is ever silently lost.</dd>
+      <dd>Private Markdown repo, default <code>~/claude-journal</code>, grouped by project. Point recorder at private clone with existing origin branch. Optional Obsidian vault uses same files.</dd>
+      <dt>What if model or sync fails?</dt>
+      <dd>Failed model skips entry. No raw fallback. Failed sync keeps local Markdown, returns failure and leaves dedup marker unchanged. Manual retry may create second entry; inspect local state first.</dd>
     </dl>
   </div>
 </section>
@@ -572,16 +642,16 @@ model: haiku · tags: [typescript, auth, debugging]
   "@context": "https://schema.org",
   "@type": "FAQPage",
   "mainEntity": [
-    { "@type": "Question", "name": "Is journal-recorder agent memory for Claude or Codex?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. Claude and Codex have their own memory systems for carrying context between sessions. journal-recorder is for the human — a readable record so you can remember what you did and find it later." } },
-    { "@type": "Question", "name": "Does journal-recorder slow down coding sessions?",
-      "acceptedAnswer": { "@type": "Answer", "text": "No. The hook exits in under a second; journal generation runs in a detached background process on Haiku and survives closing the terminal." } },
-    { "@type": "Question", "name": "Does it work with both Claude Code and Codex CLI?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Yes — one engine, both tools. Claude Code via Stop and PostCompact hooks, Codex via its notify setting. The same project within 30 minutes is journaled once." } },
-    { "@type": "Question", "name": "Where are journal entries stored?",
-      "acceptedAnswer": { "@type": "Answer", "text": "In a local folder (default ~/claude-journal) organized per project — also a git repo, an Obsidian vault, and auto-pushed to a private GitHub remote if configured." } },
-    { "@type": "Question", "name": "What happens when journal generation fails due to rate or token limits?",
-      "acceptedAnswer": { "@type": "Answer", "text": "A fallback entry containing the raw session digest is written instead, and the failure is logged. No session is silently lost." } }
+    { "@type": "Question", "name": "Which agents can record work?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Claude and Codex use transcript hooks. Cursor and Gemini use documented hook text. Copilot and other agents send manual summary through shared skill or stdin JSON." } },
+    { "@type": "Question", "name": "Does capture wait for model?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Native hooks spawn detached writer. No fixed timing guarantee. Root lock spans save and sync; busy writer exits with retry notice." } },
+    { "@type": "Question", "name": "What does APM install?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Manual skill plus core for chosen targets. Native hooks need reviewed direct installer. APM does not normalize transcript schemas or activate universal hooks." } },
+    { "@type": "Question", "name": "Where do entries live?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Private Markdown repo, default ~/claude-journal, grouped by project. Use private clone with existing origin branch. Optional Obsidian vault uses same files." } },
+    { "@type": "Question", "name": "What if model or sync fails?",
+      "acceptedAnswer": { "@type": "Answer", "text": "Failed model skips entry. No raw fallback. Failed sync keeps local Markdown, returns failure and leaves dedup marker unchanged. Manual retry may create second entry." } }
   ]
 }
 </script>
@@ -597,18 +667,19 @@ model: haiku · tags: [typescript, auth, debugging]
 (function () {
   var lines = [
     ['t-prompt', '❯ ', 't-path', 'claude', 0],
-    ['t-dim', '  … fixing auth token expiry, running tests …', 0],
+    ['t-dim', '  … fake session: choose safe save route …', 0],
     ['t-dim', '', 400],
-    ['t-ok', '✓ ', 't-dim', 'turn ended — Stop hook fired', 200],
-    ['t-tag', '[journal-recorder] ', 't-dim', 'extracting session · 42 msgs · 17 commands · 6 files', 150],
-    ['t-tag', '[journal-recorder] ', 't-dim', 'writing entry — haiku, detached, session not blocked', 150],
+    ['t-ok', '✓ ', 't-dim', 'Stop hook starts detached writer', 200],
+    ['t-tag', '[journal-recorder] ', 't-dim', 'scrub known patterns before temp and model', 150],
+    ['t-tag', '[journal-recorder] ', 't-dim', 'scrub reply and metadata, take root lock', 150],
     ['t-dim', '', 900],
-    ['t-ok', '✓ saved  ', 't-path', 'my-repo/2026-07-17_14-30_auth-refactor.md', 200],
+    ['t-ok', '✓ saved  ', 't-path', 'my-repo/2026-11-06_14-30_safe-save.md', 200],
     ['t-ok', '✓ index  ', 't-path', 'my-repo/INDEX.md', 120],
-    ['t-ok', '✓ commit ', 't-path', 'journal: my-repo — Auth Refactor', 120],
-    ['t-ok', '✓ pushed ', 't-path', 'github.com/you/claude-journal ', 't-dim', '(private)', 200],
+    ['t-ok', '✓ commit ', 't-dim', 'exact scanned output bytes', 120],
+    ['t-ok', '✓ scan   ', 't-dim', 'outgoing Git history clear', 120],
+    ['t-ok', '✓ pushed ', 't-dim', 'configured private origin', 200],
     ['t-dim', '', 300],
-    ['t-dim', 'you did nothing. it’s all on GitHub.', 100]
+    ['t-dim', 'Success example only. Failed checks block sync.', 100]
   ];
 
   var term = document.getElementById('term');
