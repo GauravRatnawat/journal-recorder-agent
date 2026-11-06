@@ -37,4 +37,4 @@ Ruling: root lock uses Unix flock. Target macOS and Linux. Cost: Windows needs f
 
 Checks: 62 fake tests pass, 82% line coverage. Python compile, Bash syntax and diff whitespace pass. No live provider call, real transcript upload or machine config change. No prior exposure proved.
 
-Release: feature branch pushed. Remote GitHub APM pin smoke blocked by automatic approval review before command ran. Local five target smoke passed earlier. Remote package install remains unverified. Main merge and live hook rollout not done.
+Release: feature branch pushed, PR #1 open. User approved temp APM install from named GitHub source. Exact pin `8665f4bbf108edda89b61f85f70a016f6485637f` installed for five targets on 2026-11-06. Both deployed core copies passed fake record, scrub and local bare remote push. Fresh suite: 62 pass, 82% line coverage. Main merge and live hook rollout not done.

@@ -114,7 +114,7 @@ apm install 'GauravRatnawat/journal-recorder-agent#FULL_REVIEWED_COMMIT_SHA' --t
 
 APM skill carries `journal.py` beside `SKILL.md`; use that engine path if direct install absent. No hook auto-activation from APM package. Native hooks use reviewed direct installer. This avoids aliasing one event into incompatible tool payloads and duplicate hook routes.
 
-Verified with APM 0.30.0: isolated local consumer install for five targets, core shipped to `.agents/skills/journal-recorder-agent` and `.claude/skills/journal-recorder-agent`, fake `record` smoke passed in both. Remote GitHub pin smoke attempted after branch push, but automatic approval review blocked external skill install. Remote install remains unverified. No user-scope APM config changed during checks.
+Verified with APM 0.30.0: GitHub install at `8665f4bbf108edda89b61f85f70a016f6485637f` passed for `claude,codex,copilot,cursor,gemini` in temp home. Core shipped to `.agents/skills/journal-recorder-agent` and `.claude/skills/journal-recorder-agent`. Both copies passed fake `record`, secret scrub and push to local bare Git remote. Local consumer install passed too. No real user hooks or settings changed. Agent app capture still needs live smoke.
 
 ## Legacy public publish
 
