@@ -152,6 +152,23 @@ def journal_root():
     return os.path.expanduser("~/claude-journal")
 
 
+def journal_sync_mode():
+    try:
+        with open(os.path.expanduser("~/.claude/.journal-sync")) as stream:
+            mode = stream.read().strip()
+    except FileNotFoundError:
+        return "git"
+    if mode not in ("local", "git"):
+        raise ValueError("Sync mode invalid. Run setup again.")
+    return mode
+
+
+def sync_journal(root, message, paths):
+    if journal_sync_mode() == "local":
+        return True
+    return git_commit(root, message, paths)
+
+
 def log_line(msg):
     root = journal_root()
     try:
@@ -931,6 +948,7 @@ def cmd_write(args):
         "session_id": safe_text(args.session_id).replace("\n", " "),
     })
     root = journal_root()
+    journal_sync_mode()
     project_dir = os.path.join(root, args.project)
     for path in (os.path.join(project_dir, "INDEX.md"),
                  marker_path(root, args.project), os.path.join(root, "HOME.md")):
@@ -982,7 +1000,7 @@ def cmd_write(args):
     paths = [os.path.relpath(entry_path, root), os.path.join(args.project, "INDEX.md")]
     if created_home:
         paths.append("HOME.md")
-    if not git_commit(root, f"journal: {args.project}: {title}", paths):
+    if not sync_journal(root, f"journal: {args.project}: {title}", paths):
         log_line("saved local entry. Sync blocked. Dedup marker unchanged.")
         print("Saved local entry. Sync blocked. Check Git state.")
         return 1
@@ -994,6 +1012,7 @@ def cmd_write(args):
 @locked_output(lambda days, project: journal_root())
 def cmd_digest(days, project):
     root = journal_root()
+    journal_sync_mode()
     cutoff = datetime.datetime.now().astimezone() - datetime.timedelta(days=days)
     chunks = []
     try:
@@ -1040,7 +1059,7 @@ def cmd_digest(days, project):
     ddir = os.path.join(root, "digests")
     out = os.path.join(ddir, f"{now.strftime('%Y-W%W')}.md")
     save_text(root, out, safe_text(body) + "\n")
-    if not git_commit(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
+    if not sync_journal(root, f"journal: weekly digest {now.strftime('%Y-W%W')}",
                       [os.path.relpath(out, root)]):
         print("Saved local digest. Sync blocked. Check Git state.")
         return 1
@@ -1240,6 +1259,27 @@ def cmd_publish(entry, project, site):
     return 0
 
 
+def cmd_doctor():
+    try:
+        mode = journal_sync_mode()
+        safe_text("Setup check.")
+        root = journal_root()
+        with output_parent(root, os.path.join(root, ".journal-check")) as (fd, name):
+            handle = os.open(name, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW,
+                             0o600, dir_fd=fd)
+            os.close(handle)
+            os.unlink(name, dir_fd=fd)
+        print(f"Notes ready: {root}\nSync: {mode}")
+        if not shutil.which("claude"):
+            print("Manual notes ready. Auto summaries need Claude CLI and sign-in.")
+        else:
+            print("Claude CLI found. No live model call made.")
+        return 0
+    except (OSError, ValueError):
+        print("Setup check blocked. Check folder, sync mode and privacy rules.")
+        return 1
+
+
 def cmd_check():
     root = journal_root()
     project = project_slug(os.getcwd())
@@ -1278,6 +1318,7 @@ def main():
     p_pub.add_argument("--project", default="")
     p_pub.add_argument("--site", default="")
 
+    sub.add_parser("doctor")
     sub.add_parser("record")
     sub.add_parser("resolve-dir")
     sub.add_parser("check")
@@ -1290,6 +1331,8 @@ def main():
         if args.source == "codex":
             return cmd_hook_codex(args.payload)
         return cmd_hook(args.source)
+    if args.cmd == "doctor":
+        return cmd_doctor()
     if args.cmd == "record":
         return cmd_record()
     if args.cmd == "write":
