@@ -381,10 +381,10 @@
   <div class="wrap">
     <div class="entry-no">shared core <span class="dim">· private notes · reviewed install</span></div>
     <h1>Keep work choices.<br><em>Find them later.</em></h1>
-    <p class="sub">Short work notes from <strong>Claude, Codex, Cursor and Gemini</strong> hooks. Other agents send manual summary through same core. Known secrets scrubbed before model and save. Markdown stays in <strong>your private repo</strong>.</p>
+    <p class="sub">Short work notes from <strong>Claude, Codex, Cursor and Gemini</strong> hooks. Other agents send manual summary through same core. Known secrets scrubbed before model and save. Start with <strong>local Markdown</strong>. Private Git sync optional.</p>
     <p class="purpose">Keep choice, reason, result and gotcha. Read next month with context still there.</p>
     <div class="cta-row">
-      <a class="btn primary" href="#install">Review install steps</a>
+      <a class="btn primary" href="#install">Start guided setup</a>
       <a class="btn" href="https://github.com/GauravRatnawat/journal-recorder-agent">View source →</a>
     </div>
   </div>
@@ -420,7 +420,7 @@
       <div class="step">
         <div class="n">03</div>
         <h3>Save, scan, sync</h3>
-        <p>Root lock spans save and sync. Git commits exact scanned bytes, then checks outgoing history before push. Failed model skips entry. Failed sync keeps local note and reports failure.</p>
+        <p>Save local Markdown first. Root lock guards files. Optional Git sync commits exact scanned bytes and checks outgoing history before push. Failed model skips entry. Failed Git sync keeps note and reports failure.</p>
       </div>
     </div>
   </div>
@@ -441,14 +441,14 @@
       </div>
       <div class="row">
         <h3>Per-repo folders</h3>
-        <p>Each repo gets folder, <code>INDEX.md</code> and 30 minute marker after successful sync. Worktrees share repo name. One root lock guards shared files across projects. Busy writer exits with retry notice.</p>
+        <p>Each project gets folder, <code>INDEX.md</code> and 30 minute marker after successful local save or Git sync. Worktrees share repo name. One root lock guards shared files across projects. Busy writer exits with retry notice.</p>
       </div>
       <div class="row">
         <h3>Four native routes, one manual core</h3>
         <p>Claude and Codex capture session text. Cursor and Gemini adapters use documented final text fields. Copilot, OpenCode and other agents send manual summary through same core. Optional Microsoft APM ships shared skill. Native adapters checked with fake payloads; live app smoke still needed.</p>
       </div>
       <div class="row">
-        <h3>Auto-push to GitHub</h3>
+        <h3>Optional private Git sync</h3>
         <p>Safe outputs commit with generic recorder identity. Push needs matching origin URLs, existing branch and clean outgoing scan. Old unsafe backlog blocks upload. No auto merge.</p>
       </div>
       <div class="row">
@@ -501,7 +501,7 @@ re:PROJ-\d+ =&gt; &lt;ticket&gt;</pre>
     <p>Keep rules at <code>~/.claude/.journal-redact</code>, outside Git. Missing policy uses builtins only. Invalid, unreadable or residual matching rules block flow. Public publish needs policy file.</p>
     <p class="note">Pattern scan cannot prove prose private. Model and Git traffic leave machine. Review summaries for business facts and names. Access controls on read site do not protect model or Git traffic.</p>
     <div class="ledger" style="margin-top:28px">
-      <div class="row"><h3>62 tests. 82% coverage.</h3><p>Fake credentials, temp HOME and local bare Git remotes. Python compile, Bash syntax and whitespace checks pass. No live model call in suite.</p></div>
+      <div class="row"><h3>80 tests. 83% coverage.</h3><p>Fake credentials, temp HOME and local bare Git remotes. Python compile, Bash syntax and whitespace checks pass. No live model call in suite.</p></div>
       <div class="row"><h3>Exact scanned commit</h3><p>Private Git index commits checked bytes. Push scan reads original objects and isolated origin baseline. Old deleted secrets in outgoing history still block push.</p></div>
       <div class="row"><h3>Owned output only</h3><p>Entry and generated project index included. HOME.md included only when first created. Existing dashboard edits stay local. Output writes reject symlinks.</p></div>
     </div>
@@ -545,13 +545,13 @@ tags: ["privacy", "automation"]
 <section id="layout">
   <div class="wrap">
     <div class="kicker">on disk</div>
-    <h2>Private repo. Project folders.</h2>
-    <pre class="tree">~/claude-journal/                <span class="hl">← private Git clone</span>
+    <h2>Local notes. Project folders.</h2>
+    <pre class="tree">~/journal/                       <span class="hl">← local folder, Git optional</span>
 ├── HOME.md                      <span class="hl">← created once</span>
 ├── <span class="d">my-repo/</span>
 │   ├── INDEX.md                 <span class="hl">← generated project index</span>
 │   ├── 2026-11-06_14-30_safe-save.md
-│   └── .last-written            <span class="hl">← after sync succeeds</span>
+│   └── .last-written            <span class="hl">← after save succeeds</span>
 ├── <span class="d">other-project/</span>
 ├── <span class="d">digests/</span>2026-W45.md
 ├── .journal.lock                <span class="hl">← shared save lock</span>
@@ -582,27 +582,36 @@ tags: ["privacy", "automation"]
       </div>
     </div>
     <pre style="margin-top:28px"><span class="k">open</span> "obsidian://open?path=$(python3 ~/.claude/hooks/journal.py resolve-dir)"</pre>
-    <p class="note">Or use <strong>Open folder as vault</strong> and pick journal root, default <code>~/claude-journal</code>. <code>HOME.md</code> holds dashboard queries.</p>
+    <p class="note">Or use <strong>Open folder as vault</strong> and pick journal root, default <code>~/journal</code> after new guided setup. <code>HOME.md</code> holds dashboard queries.</p>
   </div>
 </section>
 
 <section id="install" class="install">
   <div class="wrap">
     <div class="kicker">install</div>
-    <h2>Review, then install.</h2>
+    <h2>One command. Guided setup.</h2>
+    <p>Run in terminal. Press Enter for defaults. New users need no GitHub repo.</p>
+    <pre>curl -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/273ff5039c9106e60a59d49c20909b9502d513c9/bootstrap.py | python3 -I -</pre>
+    <pre>Journal Recorder setup
+Agents: claude,codex
+Save notes here? ~/journal
+Sync to existing private Git clone? n
+Apply setup? y
+Check passed. Restart agents.</pre>
+    <p class="note">Detect tools, choose folder, review planned hooks, then apply. Changed files get private backups. Failed check rolls file changes back. Fixed download pin and SHA256 check before setup runs. Need macOS or Linux, Python 3.10+ and curl.</p>
+    <p class="note">Local mode skips Git. Automatic summaries still use model service and need Claude CLI signed in. Manual summary needs no model CLI. Rerun to add tools or change folder and sync. Old hooks stay active. Remove old tool recorder hook from config to stop its capture.</p>
+    <pre>python3 ~/.claude/hooks/journal.py doctor</pre>
 
+    <details><summary>Advanced: Git sync, local checkout and APM</summary>
+    <h3>Optional private Git sync</h3>
+    <p>Run setup again. Pick existing private clone as notes folder and answer yes to sync. Setup keeps existing root and mode as defaults, checks clone and asks private repo confirmation. No login, repo creation or upload during setup.</p>
+    <p class="note">Sync needs matching origin URLs, remote branch, valid ancestry and clean outgoing scan. Old unsafe commits or existing staged data block sync. Failed Git sync keeps local note; inspect before retry.</p>
+    <h3>Local checkout</h3>
     <pre>git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
 cd journal-recorder-agent
-git checkout 8665f4bbf108edda89b61f85f70a016f6485637f
-python3 -m unittest discover -s tests
-bash install.sh --agents claude,codex,cursor,gemini</pre>
-    <p class="note">Review exact commit first. Pick only wanted hooks. Shared manual skill works across tools; optional APM distributes it. See <a href="https://github.com/GauravRatnawat/journal-recorder-agent#install-reviewed-code">README</a> for scope, privacy limits and migration.</p>
-
-    <h3>Choose private journal repo</h3>
-    <p>Start from private repo clone with existing remote branch. Point recorder at that clone:</p>
-    <pre>printf '%s\n' '/path/to/private-journal-clone' &gt; ~/.claude/.journal-folder</pre>
-    <p class="note">Sync needs matching origin fetch and push URLs, current remote branch, valid ancestry and clean outgoing scan. Old unsafe commits block upload. Existing staged data blocks recorder commit. Failed sync keeps local note; inspect Git before retry.</p>
-
+git checkout 1b64eeb4460d99b5d9d9988d9d56b080f6be4b00
+bash install.sh</pre>
+    <p class="note">Advanced explicit <code>--agents</code> installs chosen hooks and keeps current folder and sync mode. See <a href="https://github.com/GauravRatnawat/journal-recorder-agent#advanced-local-checkout">README</a> for details.</p>
     <h3>Optional Microsoft APM</h3>
     <p>APM installs portable manual skill. Native hooks still use direct installer above.</p>
     <pre>apm install 'GauravRatnawat/journal-recorder-agent#8665f4bbf108edda89b61f85f70a016f6485637f' --target claude,codex,copilot,cursor,gemini</pre>
@@ -614,7 +623,8 @@ bash install.sh --agents claude,codex,cursor,gemini</pre>
 JSON</pre>
     <p class="note">For APM only install, use <code>journal.py</code> beside deployed <code>SKILL.md</code>. Core owns saved path, metadata and sync. Direct <code>finalize</code> blocked.</p>
 
-    <p class="note">Needs macOS or Linux, Python 3.10+, Git and Bash. Full tests need Python 3.11+. Automatic generation uses Claude CLI with tools, MCP and hooks disabled, fresh temp cwd and prompt on stdin. Codex generation requires <code>JOURNAL_ALLOW_CODEX=1</code>; read only sandbox has weaker isolation. Manual record needs no model CLI.</p>
+    <p class="note">Git needed only for sync and project repo lookup. Full tests and safe edits to existing Codex TOML need Python 3.11+. Automatic generation uses Claude CLI with tools, MCP and hooks disabled. Codex generation requires <code>JOURNAL_ALLOW_CODEX=1</code> and has weaker isolation.</p>
+    </details>
   </div>
 </section>
 
@@ -630,7 +640,7 @@ JSON</pre>
       <dt>What does APM install?</dt>
       <dd>Manual skill plus core for chosen targets. Native hooks still need reviewed direct installer. APM does not normalize transcript schemas or activate universal hooks.</dd>
       <dt>Where do entries live?</dt>
-      <dd>Private Markdown repo, default <code>~/claude-journal</code>, grouped by project. Point recorder at private clone with existing origin branch. Optional Obsidian vault uses same files.</dd>
+      <dd>Local Markdown, default <code>~/journal</code> for new guided setup. Existing installs keep current root and mode. Optional private Git sync uses existing clone. Obsidian opens same files.</dd>
       <dt>What if model or sync fails?</dt>
       <dd>Failed model skips entry. No raw fallback. Failed sync keeps local Markdown, returns failure and leaves dedup marker unchanged. Manual retry may create second entry; inspect local state first.</dd>
     </dl>
@@ -649,7 +659,7 @@ JSON</pre>
     { "@type": "Question", "name": "What does APM install?",
       "acceptedAnswer": { "@type": "Answer", "text": "Manual skill plus core for chosen targets. Native hooks need reviewed direct installer. APM does not normalize transcript schemas or activate universal hooks." } },
     { "@type": "Question", "name": "Where do entries live?",
-      "acceptedAnswer": { "@type": "Answer", "text": "Private Markdown repo, default ~/claude-journal, grouped by project. Use private clone with existing origin branch. Optional Obsidian vault uses same files." } },
+      "acceptedAnswer": { "@type": "Answer", "text": "Local Markdown, default ~/journal for new guided setup. Existing installs keep current root and mode. Optional private Git sync uses existing clone. Obsidian opens same files." } },
     { "@type": "Question", "name": "What if model or sync fails?",
       "acceptedAnswer": { "@type": "Answer", "text": "Failed model skips entry. No raw fallback. Failed sync keeps local Markdown, returns failure and leaves dedup marker unchanged. Manual retry may create second entry." } }
   ]
@@ -675,11 +685,10 @@ JSON</pre>
     ['t-dim', '', 900],
     ['t-ok', '✓ saved  ', 't-path', 'my-repo/2026-11-06_14-30_safe-save.md', 200],
     ['t-ok', '✓ index  ', 't-path', 'my-repo/INDEX.md', 120],
-    ['t-ok', '✓ commit ', 't-dim', 'exact scanned output bytes', 120],
-    ['t-ok', '✓ scan   ', 't-dim', 'outgoing Git history clear', 120],
-    ['t-ok', '✓ pushed ', 't-dim', 'configured private origin', 200],
+    ['t-ok', '✓ local  ', 't-dim', 'no Git commit or push needed', 120],
+    ['t-ok', '✓ ready  ', 't-dim', 'open ~/journal in editor or Obsidian', 200],
     ['t-dim', '', 300],
-    ['t-dim', 'Success example only. Failed checks block sync.', 100]
+    ['t-dim', 'Git sync optional. Auto summaries still use model service.', 100]
   ];
 
   var term = document.getElementById('term');

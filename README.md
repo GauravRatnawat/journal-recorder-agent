@@ -1,6 +1,37 @@
 # Journal Recorder
 
-Keep short work notes in private Markdown repo. One shared core scrubs known secrets before model call, temp file and save. Exact output files pass Git scan before commit. Full outgoing history checked before push.
+Keep short work notes in local Markdown. One command starts guided setup. GitHub sync optional. Shared core scrubs known secrets before model call, temp file and save.
+
+## Quick start
+
+Need macOS or Linux, Python 3.10+ and curl. Run in terminal:
+
+```sh
+curl -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/273ff5039c9106e60a59d49c20909b9502d513c9/bootstrap.py | python3 -I -
+```
+
+Setup detects agent tools, asks notes folder and shows planned hook changes. Press Enter for defaults. New users get `~/journal` with local mode. No GitHub login or repo needed. Changed config files get private backups. Cancel before apply leaves config untouched. Failed setup check rolls file changes back.
+
+```text
+Journal Recorder setup
+Agents: claude,codex
+Save notes here? ~/journal
+Sync to existing private Git clone? n
+Apply setup? y
+Check passed. Restart agents.
+```
+
+Download uses fixed commit. Bootstrap checks archive SHA256 and rejects archive links or path escapes before running setup. Command trusts pinned bootstrap from this repo. No mutable `main` installer.
+
+Automatic summaries need Claude CLI installed and signed in. Manual skill needs no model CLI. Local mode skips Git commit and push; automatic summaries still send scrubbed text to model service. Setup makes no live model call.
+
+Run check later:
+
+```sh
+python3 ~/.claude/hooks/journal.py doctor
+```
+
+To add tools or change folder and sync later, run same setup command again. Old tool hooks stay active, even when left out on rerun. To stop capture for old tool, remove its recorder hook from config. Existing folder and mode shown as defaults. Backup paths print after apply. Restore chosen backup to original path to undo that file. Existing Codex notify kept; setup warns if recorder needs manual chaining.
 
 Recorder writes notes. [decision-ledger-setup](https://github.com/GauravRatnawat/decision-ledger-setup) builds read site from those notes. Real journal repo and history stay private. This repo holds code and fake tests only.
 
@@ -17,29 +48,32 @@ Recorder writes notes. [decision-ledger-setup](https://github.com/GauravRatnawat
 
 Cursor and Gemini capture text supplied by hook. No whole transcript parser claimed. Copilot Stop exposes transcript path, but record schema not verified here. Use manual skill there. No live end to end smoke run claimed for agent apps. Child agents use manual summary with own identity; automatic child transcript capture absent.
 
-## Install reviewed code
+## Advanced: local checkout
 
-Need macOS or Linux, Python 3.10+, Git, Bash. Root lock uses Unix `flock`. Python 3.11+ for full test suite. Claude CLI needed for automatic summary generation. Manual `record` needs no model CLI.
+Need macOS or Linux, Python 3.10+ and Bash. Git needed for sync. Existing Codex config safe edits need Python 3.11+. Root lock uses Unix `flock`. Python 3.11+ for full test suite. Claude CLI needed for automatic summary generation. Manual `record` needs no model CLI.
 
 ```sh
 git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
 cd journal-recorder-agent
-git checkout 8665f4bbf108edda89b61f85f70a016f6485637f
-python3 -m unittest discover -s tests
-bash install.sh --agents claude,codex,cursor,gemini
+git checkout 1b64eeb4460d99b5d9d9988d9d56b080f6be4b00
+bash install.sh
 ```
 
-Pick only tools wanted. Default `bash install.sh` picks Claude and Codex. `--agents manual` installs shared core and skill with no hook config changes. Restart tool after install. Installer runs from local checkout only; old pipe from mutable `main` rejected. Review checkout before install.
+Default `bash install.sh` opens same guided setup. Advanced `bash install.sh --agents claude,codex,cursor,gemini` installs explicit hooks and keeps current folder and sync mode. `--agents manual` installs core and skill only. Existing configs validated before writes and changed files backed up. Explicit route does not choose local mode for you. Restart tool after install.
 
 Core lands at `~/.claude/hooks/journal.py`. Shared skill lands at `~/.agents/skills/journal-recorder`. Existing hook entries kept. Existing root Codex notify kept; installer prints notice. Codex allows one notify command, so chain recorder yourself only after review if another notify exists.
 
-Hook config locations: Claude `~/.claude/settings.json`, Cursor `~/.cursor/hooks.json`, Gemini `~/.gemini/settings.json`, Codex `~/.codex/config.toml`. Cursor may import Claude hooks too. Pick one route for capture. Root lock covers save, generated files, commit and push. Busy writer exits with retry notice. Project dedup applies after successful sync.
+Hook config locations: Claude `~/.claude/settings.json`, Cursor `~/.cursor/hooks.json`, Gemini `~/.gemini/settings.json`, Codex `~/.codex/config.toml`. Cursor may import Claude hooks too. Pick one route for capture. Root lock covers save, generated files, commit and push. Busy writer exits with retry notice. Project dedup applies after successful local save or Git sync.
 
 This repo update does not change already installed hooks. Run installer when ready to roll out reviewed version.
 
 ## Private journal path and Git
 
-Default root: `~/claude-journal`. To change:
+Guided setup defaults new users to `~/journal`, local mode. Old installs without sync config keep legacy Git mode and `~/claude-journal` fallback. Effective mode lives in `~/.claude/.journal-sync`: `local` or `git`. Unknown mode blocks save. Run guided setup to switch safely.
+
+For optional Git sync, choose existing private clone as notes folder, answer yes and confirm repo private. Setup checks clone root, HEAD, branch and matching origin URLs with tracked origin branch. Setup makes no Git upload and cannot prove repo visibility. Next note uses full outgoing scan.
+
+Advanced path override:
 
 ```sh
 printf '%s\n' '~/Documents/my-journal' > ~/.claude/.journal-folder
@@ -59,7 +93,8 @@ Pipeline:
 
 ```text
 Agent text → deterministic scrub → temp/model → scrub reply and metadata
-→ Markdown → exact file scan → commit → outgoing history scan → origin push
+→ local Markdown
+→ optional Git: exact file scan → commit → outgoing history scan → origin push
 ```
 
 Builtins match private keys, common GitHub/OpenAI/AWS/Slack token shapes, emails, Bearer and Basic credentials, URL login fields and common secret assignments. Add private org names, hosts, paths and ticket patterns to local `~/.claude/.journal-redact`:
@@ -133,5 +168,7 @@ python3 -m py_compile journal.py
 bash -n install.sh
 python3 -W error::ResourceWarning -m unittest discover -s tests
 ```
+
+80 tests pass. Production Python line coverage: 83% across core, setup and bootstrap. Checked remote setup pin `1b64eeb4460d99b5d9d9988d9d56b080f6be4b00` passed manual local record smoke in temp HOME. Download hash, archive path and link guards checked.
 
 Tests use fake credentials, temp HOME and local bare Git remotes. No real transcript upload, live model call or live hook install. See [plan](docs/superpowers/plans/2026-10-24-safe-shared-recorder.md) for change scope.

@@ -1,18 +1,22 @@
 # Journal Recorder
 
-Shared safe summary core. Python stdlib. Private Markdown source, exact owned file commits, outgoing Git history scan. Renderer lives in separate decision-ledger-setup repo.
+Shared safe summary core. Python stdlib. Local Markdown first, optional private Git sync. Renderer lives in separate decision-ledger-setup repo.
 
-Claude Stop/PostCompact and Codex notify capture supported. Codex needs exact thread ID and cwd. Cursor afterAgentResponse reads final text. Gemini AfterAgent reads prompt plus reply. Copilot and other agents use manual stdin JSON or shared skill. Native routes tested with fake payloads. No live agent app capture smoke claimed.
+Quick start: curl -fsSL https://raw.githubusercontent.com/GauravRatnawat/journal-recorder-agent/273ff5039c9106e60a59d49c20909b9502d513c9/bootstrap.py | python3 -I -
+
+Need macOS or Linux, Python 3.10+ and curl. Fixed bootstrap checks archive SHA256 before extraction or setup. Guided setup detects agents, asks folder and optional Git, previews hook changes without config secrets, backs up changed files and checks installed core. Failure or interrupt rolls file changes back, including hook modes. New users default ~/journal with local mode. Existing installs keep root and mode defaults. Rerun adds routes, keeps old hooks active. Remove old tool recorder hook from config to stop its capture. Existing Codex TOML needs Python 3.11+ for safe parse. Run journal.py doctor later.
+
+Local mode skips Git commit and push. Manual summary needs no model CLI. Automatic summaries need Claude CLI installed and signed in; scrubbed text still goes to model service. Setup makes no model call or upload. Optional Git uses existing private clone, matching origin URLs and tracked remote branch. Setup cannot prove repo private, asks user confirmation. Legacy installs without .journal-sync keep Git behavior.
+
+Claude Stop/PostCompact and Codex notify capture supported. Codex needs exact thread ID and cwd. Cursor afterAgentResponse reads final text. Gemini AfterAgent reads prompt plus reply. Copilot and other agents use manual stdin JSON or shared skill. Native routes checked with fake payloads, no live app capture smoke claimed.
 
 Known secrets scrubbed before model, temp and save. Reply and metadata scrub again. Model failure skips entry. No raw fallback. Bad local policy blocks; missing policy uses builtins only. Pattern scan cannot prove all prose safe. Model and private Git send data off machine.
 
-Root lock spans save and sync. Busy writer exits for later retry. Commit holds exact scanned bytes in private Git index. Push scans original outgoing Git objects, commit headers and paths against isolated fetched baseline. Existing staged changes block commit. Existing HOME.md edits stay local. Output writes reject symlinks. Failed sync keeps local Markdown, returns failure and leaves dedup marker unchanged. Retry may create second entry.
+Root lock spans save and sync. Busy writer exits for later retry. Git mode commits exact scanned bytes in private index, scans original outgoing objects and isolated origin baseline. Existing staged changes block commit. Existing HOME.md edits stay local. Output writes reject symlinks. Failed Git sync keeps Markdown, returns failure and leaves dedup unchanged. Local save sets dedup after success.
 
-Need macOS or Linux, Python 3.10+, Git and Bash. Full suite needs Python 3.11+. Install from reviewed checkout with bash install.sh --agents claude,codex,cursor,gemini. Manual route needs no model. Claude CLI used for automatic summaries. Codex writer needs explicit JOURNAL_ALLOW_CODEX=1 and has weaker isolation.
+APM stays advanced, ships manual skill and core without hook activation. Earlier APM 0.30.0 pin 8665f4bbf108edda89b61f85f70a016f6485637f passed five target temp install. Current guided setup pin 1b64eeb4460d99b5d9d9988d9d56b080f6be4b00 passed checked remote archive install plus local record in temp HOME.
 
-Optional Microsoft APM ships root manual skill plus core, no universal hook activation. APM 0.30.0 GitHub install at 8665f4bbf108edda89b61f85f70a016f6485637f passed five targets: claude,codex,copilot,cursor,gemini. Both deployed core copies passed fake record, scrub and local bare Git push in temp home. Real hooks and settings unchanged.
+Checks: 80 tests pass. Production Python line coverage 83%. Fake data, temp homes and local remotes. No real hook change or live provider call in tests.
 
-Checks: 62 tests pass, 82% line coverage. Python compile, Bash syntax and diff whitespace pass. Fake credentials, temp HOME and local remotes only. No live provider call.
-
-Source and current steps: https://github.com/GauravRatnawat/journal-recorder-agent
+Source: https://github.com/GauravRatnawat/journal-recorder-agent
 Renderer: https://github.com/GauravRatnawat/decision-ledger-setup
