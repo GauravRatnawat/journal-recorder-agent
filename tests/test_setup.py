@@ -294,6 +294,22 @@ class SetupTests(unittest.TestCase):
             self.assertIn(('Sync to existing private Git clone? y/n', 'y'), prompts)
             self.assertEqual('# old core', hook.read_text())
 
+    def test_bootstrap_main_uses_checked_payload_and_terminal(self):
+        spec = importlib.util.spec_from_file_location('bootstrap', Path(journal.__file__).with_name('bootstrap.py'))
+        bootstrap = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bootstrap)
+        response = mock.MagicMock()
+        response.__enter__.return_value.read.return_value = b'fake archive'
+        with mock.patch.object(bootstrap.urllib.request, 'urlopen', return_value=response), \
+                mock.patch.object(bootstrap, 'extract_checked', return_value=Path('/fake/payload')) as extract, \
+                mock.patch('builtins.open', mock.mock_open()), \
+                mock.patch.object(bootstrap.subprocess, 'run', return_value=mock.Mock(returncode=0)) as run:
+            self.assertEqual(0, bootstrap.main())
+            self.assertEqual(b'fake archive', extract.call_args.args[0])
+            self.assertEqual(bootstrap.SHA256, extract.call_args.args[2])
+            self.assertEqual('-I', run.call_args.args[0][1])
+            self.assertIn('stdin', run.call_args.kwargs)
+
     def test_bootstrap_checks_hash_paths_and_links(self):
         import hashlib
         import tarfile
