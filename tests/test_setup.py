@@ -275,6 +275,25 @@ class SetupTests(unittest.TestCase):
             self.assertEqual('quiet', parsed['mcp_servers']['demo']['env']['notify'])
             self.assertEqual('', warning)
 
+    def test_legacy_install_keeps_default_root_and_git_choice(self):
+        setup = self.load_setup()
+        with tempfile.TemporaryDirectory() as tmp:
+            home = Path(tmp).resolve()
+            hook = home / '.claude/hooks/journal.py'
+            hook.parent.mkdir(parents=True)
+            hook.write_text('# old core')
+            prompts = []
+            def answer(prompt, default):
+                prompts.append((prompt, default))
+                return 'n' if prompt.startswith('Confirm origin') else default
+            with mock.patch.object(setup, 'ask', side_effect=answer), \
+                    mock.patch.object(setup, 'check_git'), \
+                    mock.patch.object(setup.shutil, 'which', return_value=None):
+                self.assertEqual(0, setup.guided(home))
+            self.assertIn(('Save notes here?', str(home / 'claude-journal')), prompts)
+            self.assertIn(('Sync to existing private Git clone? y/n', 'y'), prompts)
+            self.assertEqual('# old core', hook.read_text())
+
     def test_bootstrap_checks_hash_paths_and_links(self):
         import hashlib
         import tarfile

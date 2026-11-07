@@ -233,12 +233,16 @@ def guided(home):
     print('Journal Recorder setup\nPress Enter for defaults. Ctrl-C cancels.')
     agents = ask('Agents, comma separated', defaults).split(',')
     agents = list(dict.fromkeys(agent.strip() for agent in agents))
-    folder = read_text(home / '.claude/.journal-folder').strip() or str(home / 'journal')
+    legacy = (home / '.claude/hooks/journal.py').exists() or (home / '.claude/.journal-folder').exists()
+    fallback = home / ('claude-journal' if legacy else 'journal')
+    folder = read_text(home / '.claude/.journal-folder').strip() or str(fallback)
     root = Path(os.path.expanduser(ask('Save notes here?', folder))).absolute()
     check_folder(root)
     mode = read_text(home / '.claude/.journal-sync').strip()
     if not mode:
-        mode = 'git' if (home / '.claude/.journal-folder').exists() else 'local'
+        mode = 'git' if legacy else 'local'
+    if mode not in ('local', 'git'):
+        raise ValueError('Sync mode invalid. Fix .journal-sync before setup.')
     choice = ask('Sync to existing private Git clone? y/n', 'y' if mode == 'git' else 'n').lower()
     if choice not in ('y', 'yes', 'n', 'no'):
         raise ValueError('Use y or n.')
