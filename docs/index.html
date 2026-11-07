@@ -603,27 +603,8 @@ Check passed. Restart agents.</pre>
     <pre>python3 ~/.claude/hooks/journal.py doctor</pre>
 
     <details><summary>Advanced: Git sync, local checkout and APM</summary>
-    <h3>Optional private Git sync</h3>
-    <p>Run setup again. Pick existing private clone as notes folder and answer yes to sync. Setup keeps existing root and mode as defaults, checks clone and asks private repo confirmation. No login, repo creation or upload during setup.</p>
-    <p class="note">Sync needs matching origin URLs, remote branch, valid ancestry and clean outgoing scan. Old unsafe commits or existing staged data block sync. Failed Git sync keeps local note; inspect before retry.</p>
-    <h3>Local checkout</h3>
-    <pre>git clone https://github.com/GauravRatnawat/journal-recorder-agent.git
-cd journal-recorder-agent
-git checkout 1b64eeb4460d99b5d9d9988d9d56b080f6be4b00
-bash install.sh</pre>
-    <p class="note">Advanced explicit <code>--agents</code> installs chosen hooks and keeps current folder and sync mode. See <a href="https://github.com/GauravRatnawat/journal-recorder-agent#advanced-local-checkout">README</a> for details.</p>
-    <h3>Optional Microsoft APM</h3>
-    <p>APM installs portable manual skill. Native hooks still use direct installer above.</p>
-    <pre>apm install 'GauravRatnawat/journal-recorder-agent#8665f4bbf108edda89b61f85f70a016f6485637f' --target claude,codex,copilot,cursor,gemini</pre>
-    <p class="note">Exact pin tested with APM 0.30.0 in temp home. Both deployed core copies passed fake record, secret scrub and push to local bare Git remote. APM package does not activate hooks.</p>
-
-    <h3>Send manual summary</h3>
-    <pre>python3 ~/.claude/hooks/journal.py record &lt;&lt;'JSON'
-{"agent":"copilot","cwd":"/path/to/project","session_id":"session-id","summary":"# Safe choice\n\nKeep reason and result.\n\n## Tags\n#journal #privacy"}
-JSON</pre>
-    <p class="note">For APM only install, use <code>journal.py</code> beside deployed <code>SKILL.md</code>. Core owns saved path, metadata and sync. Direct <code>finalize</code> blocked.</p>
-
-    <p class="note">Git needed only for sync and project repo lookup. Full tests and safe edits to existing Codex TOML need Python 3.11+. Automatic generation uses Claude CLI with tools, MCP and hooks disabled. Codex generation requires <code>JOURNAL_ALLOW_CODEX=1</code> and has weaker isolation.</p>
+    <p>README holds full steps for <a href="https://github.com/GauravRatnawat/journal-recorder-agent#private-journal-path-and-git">private Git sync</a>, <a href="https://github.com/GauravRatnawat/journal-recorder-agent#advanced-local-checkout">local checkout</a>, <a href="https://github.com/GauravRatnawat/journal-recorder-agent#optional-microsoft-apm">Microsoft APM</a> and <a href="https://github.com/GauravRatnawat/journal-recorder-agent#manual-summary-from-any-agent">manual summary</a>.</p>
+    <p class="note">Read <a href="https://github.com/GauravRatnawat/journal-recorder-agent#privacy-filter">privacy limits</a>, <a href="https://github.com/GauravRatnawat/journal-recorder-agent#model-provider">model choices</a> and <a href="https://github.com/GauravRatnawat/journal-recorder-agent#checks">release check scope</a> before use. APM ships manual skill and core; native hooks use direct setup.</p>
     </details>
   </div>
 </section>

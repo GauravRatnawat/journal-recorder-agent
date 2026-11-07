@@ -169,6 +169,16 @@ bash -n install.sh
 python3 -W error::ResourceWarning -m unittest discover -s tests
 ```
 
-80 tests pass. Production Python line coverage: 83% across core, setup and bootstrap. Checked remote setup pin `1b64eeb4460d99b5d9d9988d9d56b080f6be4b00` passed manual local record smoke in temp HOME. Download hash, archive path and link guards checked.
+Release check record: 80 tests passed, 83% production Python line coverage across core, setup and bootstrap. Earlier shared core release had 62 tests, 82% line coverage, from 18 test baseline. These record past checks, no fresh run claimed.
 
-Tests use fake credentials, temp HOME and local bare Git remotes. No real transcript upload, live model call or live hook install. See [plan](docs/superpowers/plans/2026-10-24-safe-shared-recorder.md) for change scope.
+Checked setup payload: `1b64eeb4460d99b5d9d9988d9d56b080f6be4b00`. Archive SHA256: `0d602c1a82e8f64f3f3f71334f70563509f3484066446ef3243789ce139de316`. Bootstrap: `273ff5039c9106e60a59d49c20909b9502d513c9`. Future release must update both pins and archive hash. Checked remote archive install and manual local record passed in temp HOME. Exact documented curl pipe passed real terminal flow, local mode, no Git repo. Archive checks cover hash, links, path escapes, extra roots and size limit; piped source reads prompts from `/dev/tty`.
+
+APM 0.30.0 release pin `8665f4bbf108edda89b61f85f70a016f6485637f` passed GitHub install for `claude,codex,copilot,cursor,gemini` on 2026-11-06 in temp HOME. Local consumer passed too. Both deployed core copies passed fake record, scrub and push to local bare Git remote.
+
+Core checks cover extraction with tool calls and elision, project slug and worktree lookup, frontmatter, dedup, generated indexes and digest windows. Privacy checks cover invalid or unreadable rules, replacement leaving secrets, model input and reply scrub, model failure with no raw fallback, metadata quotes, output and log symlinks, publish date path escape, exact scanned commit bytes, old outgoing secrets, Git replace bypass, Basic auth, URL login, isolated fetch baseline, existing dashboard ownership, failed sync status and root writer lock.
+
+Setup checks cover local record and digest without Git, legacy and unknown modes, agent detection, hook merge, private backups, secret free preview, cancel before apply, bad JSON and symlink rejection. Failed apply, check or interrupt restores file bytes and modes. Git option checks existing clone, matching origin URLs and tracked branch with no upload. Existing root Codex notify stays, including quoted key; nested notify does not hide root route. Doctor checks folder, mode and privacy rules with no model call.
+
+Python compile, Bash syntax, doc shell syntax, JSON-LD parse and diff whitespace passed for prior releases. Page checked at 375, 768 and 1440 widths with no overflow or console errors; advanced details opened and phone and desktop screenshots viewed. Fresh code, Python and security reviews covered prior releases; easy setup checks followed user TDD waiver, no full RED then GREEN claim.
+
+Tests use fake credentials, temp HOME and local bare Git remotes. No real transcript upload, live model call or real user hook/config change. Claude and Codex capture checks use fake session data; Cursor and Gemini use documented field fixtures and temp install checks. Native app capture still needs live smoke. Copilot and unverified tools use manual summary. Automatic child transcript capture absent. Past privacy audit found gaps but did not prove prior exposure; checks cannot prove all prose safe.
